@@ -39,6 +39,14 @@ class Settings:
     cookie_secure: bool
     frontend_dist: Path
     knowledge_dir: Path
+    rag_enabled: bool
+    rag_top_k: int
+    rag_max_distance: float
+    rag_context_max_chars: int
+    rag_embedding_model: str
+    rag_embedding_dim: int
+    rag_embedding_location: str
+    rag_log_queries: bool
 
 
 @lru_cache
@@ -64,4 +72,12 @@ def get_settings() -> Settings:
         cookie_secure=_env("COOKIE_SECURE") == "1",
         frontend_dist=Path(_env("FRONTEND_DIST") or REPO_ROOT / "frontend" / "dist"),
         knowledge_dir=Path(_env("KNOWLEDGE_DIR") or REPO_ROOT / "knowledge"),
+        rag_enabled=_env("RAG_ENABLED", "true").lower() not in ("0", "false", "no"),
+        rag_top_k=int(_env("RAG_TOP_K", "4")),
+        rag_max_distance=float(_env("RAG_MAX_DISTANCE", "0.65")),
+        rag_context_max_chars=int(_env("RAG_CONTEXT_MAX_CHARS", "12000")),
+        rag_embedding_model=_env("RAG_EMBEDDING_MODEL", "gemini-embedding-001"),
+        rag_embedding_dim=int(_env("RAG_EMBEDDING_DIM", "768")),
+        rag_embedding_location=_env("RAG_EMBEDDING_LOCATION", "global"),
+        rag_log_queries=_env("RAG_LOG_QUERIES", "0").lower() in ("1", "true", "yes"),
     )

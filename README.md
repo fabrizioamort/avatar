@@ -31,6 +31,8 @@ COOKIE_SECURE=0
 
 `GOOGLE_CLOUD_PROJECT` is your Google Cloud project id; `FIRESTORE_DATABASE` must be `(default)` (the Firestore free quota only applies to the default database). Both are set up in the next section.
 
+The `RAG_*` variables (knowledge retrieval) are all optional and have sensible defaults in `backend/app/config.py`; you only need to set them to override the defaults. See [Knowledge retrieval (RAG)](#knowledge-retrieval-rag) below.
+
 ### OpenRouter
 
 The Avatar's LLM calls go through [OpenRouter](https://openrouter.ai). If you already have a key in `.env`, skip this.
@@ -93,12 +95,38 @@ All tests must pass. They check that a project id is resolvable (from `GOOGLE_CL
 
 The twin's knowledge and voice come from a few files in `knowledge/`, read into the system prompt at runtime. Edit these to make the twin yours:
 
-- **`knowledge.md`** - a rich, first-person profile of you (background, work, courses, skills, personal notes). The main "who I am" source.
-- **`style.md`** - how the twin should sound: voice and personality, formatting rules, and safety/guardrail rules for answering on the public internet.
+- **`knowledge.md`** - a rich, first-person profile of you (background, work, courses, skills, personal notes). The main "who I am" source. It is chunked, embedded, and retrieved per turn (see [Knowledge retrieval (RAG)](#knowledge-retrieval-rag)) rather than pasted into the prompt wholesale.
+- **`style.md`** - how the twin should sound: voice and personality, formatting rules, and safety/guardrail rules for answering on the public internet. This stays in the system prompt verbatim (not embedded).
 - **`faq.jsonl`** - one JSON object per line. Each row has `faq` (number), `question` (the full question), `answer` (the full answer, in markdown), and `query` (a short, precise phrasing used only for routing). The prompt lists the `query` phrasings so the model can match a visitor's question to a number; the FAQ tool and the `Qn` shortcut then return the full original question and answer. Visitors can also type a bare `Qn` (e.g. `Q2`) for an instant answer with no LLM call, and a deep link like `…/?q=2` opens the chat and immediately asks Q2 (handy for sharing a direct answer or embedding).
 - **`pic.jpg`** - your photo, used for the human avatar; a robotic variant is used for the twin (see `design-system/docs/avatar-generation.md`).
 
-There is no vector database. (Earlier versions used `summary.txt` and a `linkedin.pdf`; these have been replaced by `knowledge.md` and `style.md`.)
+(Earlier versions used `summary.txt` and a `linkedin.pdf`; these have been replaced by `knowledge.md` and `style.md`.)
+
+### Knowledge retrieval (RAG)
+
+The profile in `knowledge.md` is served to the Avatar by **Retrieval-Augmented Generation**: it is split into chunks, each embedded with Vertex AI (`gemini-embedding-001`, 768 dims) and stored in a Firestore `knowledge_chunks` collection. On each non-FAQ turn the visitor's message is embedded and the nearest chunks (Firestore Vector Search, cosine distance) are injected into the system prompt. `Qn` instant answers and the `faq_tool` are unchanged and never hit RAG. If no chunk is confident enough, the full `knowledge.md` is used as a fallback.
+
+One-time, create the vector index (needs the index for `is_active` + `embedding`):
+
+```bash
+gcloud firestore indexes composite create \
+  --collection-group=knowledge_chunks \
+  --query-scope=COLLECTION \
+  --field-config=order=ASCENDING,field-path=is_active \
+  --field-config=field-path=embedding,vector-config='{"dimension":"768","flat":"{}"}' \
+  --database="(default)"
+```
+
+Then ingest the knowledge (re-run after any edit to `knowledge.md`; unchanged chunks are skipped, deleted ones are marked inactive):
+
+```bash
+cd backend
+uv run python scripts/ingest_knowledge.py --dry-run   # preview what would change
+uv run python scripts/ingest_knowledge.py             # embed + write
+uv run python scripts/eval_retrieval.py               # optional: hit@1/hit@3/MRR
+```
+
+Ingestion runs locally against your Firestore project (ADC, same as the connectivity test); there is no admin endpoint or scheduler in v1. Embeddings are inexpensive at this scale but are billed usage, not free — keep a budget alert (see [DEPLOY.md](DEPLOY.md)). If you change `RAG_EMBEDDING_DIM`, recreate the index and re-ingest with `--force-reembed`.
 
 A couple of owner-specific bits live in the frontend rather than `.env`: the **footer social links** in `frontend/index.html` point to the owner's LinkedIn and YouTube (update them to your own), and the avatar images in `frontend/public/` are generated from `pic.jpg` (see `design-system/docs/avatar-generation.md`). The background texture can also be swapped (rings / crosses / grid) via the `--grid-mark` token in `frontend/src/styles/tokens.css` — see `design-system/docs/background-texture.md`. The brand subtitle and any owner-specific copy are currently set for the default owner, so review those too when making the twin your own.
 

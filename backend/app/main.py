@@ -11,7 +11,7 @@ from limits import parse
 from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 
-from app import agent, db, knowledge
+from app import agent, db, knowledge, rag_service
 from app.auth import (
     clear_session_cookie,
     is_authenticated,
@@ -117,9 +117,17 @@ async def _chat_events(request: ChatRequest) -> AsyncIterator[dict]:
         yield {"type": "done", "message_id": row["id"], "needs_attention": False}
         return
 
+    retrieved_text = ""
+    if settings.rag_enabled:
+        retrieved = rag_service.retrieve_knowledge(message)
+        retrieved_text = rag_service.format_retrieved_context(retrieved)
+    if not retrieved_text:
+        # No confident chunk (or RAG disabled): fall back to the static profile.
+        retrieved_text = knowledge.knowledge_text()
+
     rows = [Message(**r) for r in db.get_messages(request.conversation_id)]
     transcript = agent.render_transcript(rows, settings.owner_name)
-    async for event in agent.stream_agent(transcript):
+    async for event in agent.stream_agent(transcript, retrieved_text):
         if event["type"] == "_final":
             tool_names = [tc["tool"] for tc in event["tool_calls"]]
             needs_attention = "push_tool" in tool_names

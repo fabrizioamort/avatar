@@ -56,8 +56,12 @@ def push_tool(message: str) -> str:
     return push(message)
 
 
-def build_system_prompt() -> str:
-    """Assemble the full multi-way system prompt for the Avatar."""
+def build_system_prompt(retrieved_knowledge: str = "") -> str:
+    """Assemble the full multi-way system prompt for the Avatar.
+
+    ``retrieved_knowledge`` is the RAG-retrieved profile context for the current
+    turn; it replaces the full static profile that used to be injected wholesale.
+    """
     settings = get_settings()
     owner = settings.owner_name
     return f"""# Your role
@@ -66,12 +70,13 @@ You are the digital twin of {owner}, an AI chatting with visitors on {owner}'s w
 You represent {owner} professionally, as if speaking to a potential client or future employer.
 If asked, say clearly that you are an AI digital twin of {owner}.
 
-# About {owner}
+# Relevant knowledge about {owner}
 
-The following profile of {owner} is written in the first person. Speak as {owner}'s digital twin,
-drawing on it to answer questions about their career, background, skills, experience and courses:
+The following first-person knowledge about {owner} was retrieved for this conversation. Speak as
+{owner}'s digital twin, drawing on it to answer questions about their career, background, skills,
+experience and courses. If it is insufficient, do not invent: say you do not know and use push_tool.
 
-{knowledge.knowledge_text()}
+{retrieved_knowledge}
 
 # Your style and voice
 
@@ -114,12 +119,12 @@ Output only the Avatar's next reply text. Do not prefix it with "Avatar:".
 """
 
 
-def build_agent() -> Agent:
-    """Construct the Avatar agent with its tools."""
+def build_agent(retrieved_knowledge: str = "") -> Agent:
+    """Construct the Avatar agent with its tools and retrieved knowledge."""
     settings = get_settings()
     return Agent(
         name="Avatar",
-        instructions=build_system_prompt(),
+        instructions=build_system_prompt(retrieved_knowledge),
         model=settings.model,
         tools=[faq_tool, push_tool],
     )
@@ -139,9 +144,9 @@ def render_transcript(rows: list[Message], owner_name: str) -> str:
     return f"{transcript}\n\nReply as the Avatar:"
 
 
-async def stream_agent(transcript: str) -> AsyncIterator[dict]:
+async def stream_agent(transcript: str, retrieved_knowledge: str = "") -> AsyncIterator[dict]:
     """Stream the Avatar's reply, yielding tool, token, and a final internal event."""
-    agent = build_agent()
+    agent = build_agent(retrieved_knowledge)
     result = Runner.run_streamed(agent, transcript)
     tool_calls: list[dict] = []
     async for event in result.stream_events():

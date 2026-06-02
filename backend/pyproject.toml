@@ -12,6 +12,8 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
     "google-cloud-firestore>=2.16.0",
+    "google-genai>=1.0.0",
+    "pyyaml>=6.0.0",
     "limits>=5.8.0",
 ]
 
@@ -25,4 +27,5 @@ dev = [
 pythonpath = ["."]
 markers = [
     "llm: tests that call the language model (cost tokens)",
+    "rag_live: tests that call live embedding/Firestore vector search",
 ]

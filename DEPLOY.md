@@ -28,7 +28,8 @@ How to deploy Avatar to **Google Cloud Run** as a single container, run it in pr
 - **Firestore** free quota is daily (1 GiB stored, 50k reads, 20k writes, 20k deletes) and applies only to the **default** database. The inbox reads one parent document per conversation (not one per message) to stay well inside the read quota.
 - **Secret Manager** gives 6 active secret versions and 10k access operations/month free. Avatar uses exactly five secrets (`OPENROUTER_API_KEY`, `ADMIN_PASSWORD`, `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `SESSION_SECRET`); `MODEL` and `OWNER_NAME` are non-secret env vars. Keep one active version per secret.
 - **Artifact Registry** has a small free storage allowance. `setup_gcp.*` applies a cleanup policy (keep the 2 most recent versions, delete versions older than 30 days). See the note below about which repo source deploys actually use.
-- **Budget alerts** notify but do not cap spend. Consider adding a low budget alert in the Cloud Console as an early warning.
+- **Vertex AI embeddings** (knowledge retrieval) are **billed usage, not free**. At a personal twin's scale the cost is tiny: ingestion embeds a handful of chunks once per knowledge edit, and each non-FAQ chat turn embeds one short query. Even so, treat it as real spend and rely on a budget alert rather than assuming free-tier coverage.
+- **Budget alerts** notify but do not cap spend. Add a low budget alert in the Cloud Console as an early warning (it also covers the embedding spend above).
 
 ## 1. Prerequisites
 
@@ -36,6 +37,7 @@ How to deploy Avatar to **Google Cloud Run** as a single container, run it in pr
 - Application Default Credentials authorized: `gcloud auth application-default login`.
 - The root `.env` fully populated (see [README setup](README.md#setup-instructions)), including `SESSION_SECRET`. `.env` is **never** uploaded to Cloud Build (`.gcloudignore` excludes it) and never baked into the image; secrets come from Secret Manager.
 - `scripts/setup_gcp.*` run once (enables APIs, creates Firestore, the `avatar-runtime` service account, and the secrets). No local Docker is needed — Cloud Build builds remotely.
+- The **knowledge vector index** created once and the knowledge **ingested** at least once, so the Avatar has something to retrieve. Both are local steps (run against the same Firestore project via ADC); see [Knowledge retrieval (RAG)](README.md#knowledge-retrieval-rag). The `knowledge/` markdown is bundled in the image, but the embeddings live in Firestore, so re-run the ingest after any knowledge edit — it is not part of the container build. There is no admin ingest endpoint or scheduler in v1: ingestion is a deliberate, manual CLI step (a scheduler would only re-ingest the same bundled files).
 
 ## 2. Deploy
 
@@ -82,6 +84,8 @@ Run against the printed `https://<service>-<hash>.<region>.run.app` URL. Use `MO
 - [ ] `curl -s <URL>/api/config` → `{"owner_name":"..."}` (200).
 - [ ] `/` loads the visitor UI (dark + light, desktop + mobile); the rings background and the LinkedIn/YouTube footer render.
 - [ ] A normal question streams a reply (real LLM call over SSE); `Q2` returns the instant FAQ; `<URL>/?q=2` opens and immediately answers Q2.
+- [ ] RAG retrieval works: a question about a specific part of your `knowledge.md` (e.g. a named project or skill) gets a grounded, accurate answer. Logs show a `rag_retrieval` line with a low `best_distance` and the expected `sources`: `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="avatar" AND textPayload:rag_retrieval' --freshness=15m`. (Raw queries are not logged unless `RAG_LOG_QUERIES=1`.)
+- [ ] The vector index is `READY` (`gcloud firestore indexes composite list --database="(default)"`) and `knowledge_chunks` has the expected number of `is_active` docs (re-run `scripts/ingest_knowledge.py` if not).
 - [ ] FAQ routing works (e.g. ask about a NameError → `faq_tool`), and links in replies are clickable.
 - [ ] `/admin` → wrong password rejected; correct `ADMIN_PASSWORD` opens the dashboard; the inbox lists conversations and a thread opens quickly. Without the cookie, `GET /admin/conversations` returns 401.
 - [ ] Post a human message from admin → it appears in the visitor's chat within ~10 s (polling), styled as the "live" bubble.
@@ -96,7 +100,7 @@ Run against the printed `https://<service>-<hash>.<region>.run.app` URL. Use `MO
 Deployment is successful when:
 - The app is reachable at its `run.app` URL over HTTPS, with `min-instances=0`, `max-instances=1`, request-based billing, and the `avatar-runtime` service account.
 - Firestore uses the default database and the parent-doc inbox aggregate model.
-- All of the visitor, admin (login-gated), three-way human-in-the-loop, `Qn`/`?q=` instant answers, FAQ-tool routing, and Pushover paths work end to end.
+- All of the visitor, admin (login-gated), three-way human-in-the-loop, `Qn`/`?q=` instant answers, FAQ-tool routing, RAG knowledge retrieval, and Pushover paths work end to end.
 - Secrets are configured via Secret Manager (never baked into the image); the admin cookie is `Secure`.
 - Logs are clean.
 

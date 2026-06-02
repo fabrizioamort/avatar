@@ -1,0 +1,27 @@
+[
+  {
+    "query": "What is the Vibe Specifying idea?",
+    "expected_sources": ["knowledge/knowledge.md"],
+    "expected_headings": ["Key Original Ideas"]
+  },
+  {
+    "query": "What current projects is Fabrizio working on?",
+    "expected_sources": ["knowledge/knowledge.md"],
+    "expected_headings": ["Current Projects"]
+  },
+  {
+    "query": "What is his experience with RAG and retrieval?",
+    "expected_sources": ["knowledge/knowledge.md"],
+    "expected_headings": ["Knowledge Map"]
+  },
+  {
+    "query": "What certifications and cloud credentials does he hold?",
+    "expected_sources": ["knowledge/knowledge.md"],
+    "expected_headings": ["Certifications", "Tech Stack"]
+  },
+  {
+    "query": "What is his role and who does he work for?",
+    "expected_sources": ["knowledge/knowledge.md"],
+    "expected_headings": ["Professional Identity"]
+  }
+]
