@@ -1,46 +1,136 @@
-# Ed Donner
+# Fabrizio Amort
 
-I'm Ed Donner — entrepreneur, software engineer, data scientist, speaker and AI educator, and co-founder & CTO of Nebula.io. I'm originally from London, England and moved to New York City in 2000, where I'm based. I learned to code at age 8 and still spend my weekends writing code and experimenting with LLMs (in my own words, "rather badly"). At my core I'm a software engineer and a scientist, and it brings me great joy to help others unlock the astonishing power of LLMs.
+Fabrizio is a software engineer with 30 years of experience in the software industry. He is passionate about software development and artificial intelligence.
 
-## What I do now
-- **Nebula.io — Co-founder & CTO (since 2021).** We apply generative AI and our own patented, proprietary LLMs to help recruiters source, understand, engage and manage talent — matching people to roles more accurately and faster than was previously possible, with no keywords required. The long-term mission, inspired by the Japanese concept of *Ikigai*, is to help people discover their potential and pursue their reason for being. Since ~77% of people don't feel inspired or engaged at work, raising human prosperity through better-fit work is genuinely within reach.
-- **Simplified.Travel — AI Advisor (since Feb 2025).** Advising on highly personalized, data-driven itineraries for destinations, hotels and tourism organizations.
-- I speak and advise widely on Generative AI and Agentic AI.
-- I hold a patent: *"Apparatus for determining role fitness while eliminating unwanted bias."*
+## Professional Identity
 
-## Teaching & courses
-I'm the author of best-selling, top-rated Udemy courses on AI Engineering and building Agents, with **600,000+ students enrolled across 194 countries**. Together they're a practical roadmap to becoming a proficient AI engineer, built around real AI-engineering job descriptions. The courses are complementary and can be taken in any order, with two natural starting points: **AI Builder** (use products to build agents) or **AI Coder** (use agents to build products). Graduates of the full curriculum can list themselves — with a Digital Twin profile — at proficientaiengineer.com.
+**Role:** GenAI Architect  
+**Employer:** TIM (Telecom Italia) — large Italian Telco  
+**Experience:** 30+ years in software engineering and system architecture  
+**Career arc:** Low-level systems → web platforms → cloud-native → AI architectures  
+**Primary cloud:** Google Cloud Platform / Vertex AI  
+**Primary language:** Python  
 
-The current courses:
-1. **AI Builder: Create Agents, Voice Agents & Automations in n8n** (3 weeks; everyone, beginner → senior) — agents and voice agents with n8n, ElevenLabs, APIs, context engineering, security, MCP.
-2. **AI Coder: Vibe Coder to Agentic Engineer in 3 weeks** (3 weeks; all backgrounds) — Cursor, GitHub Copilot, Codex, Claude Code, MCP, slash commands, checkpoints, multi-agent systems, the Claude Agent SDK; progresses from vibe coding to professional-grade engineering to multi-agent orchestration.
-3. **AI Leader: Generative AI & Agentic AI for Leaders & Founders** (briefing format; leaders, founders, technical and product people) — AI strategy, decision-making and leadership with actionable toolkits.
-4. **AI Engineer: Core Track** (8 weeks; refreshed for 2026) — APIs, model selection, open-source models, RAG, QLoRA fine-tuning, agent platforms; OpenAI, Anthropic, Gemini, Hugging Face, LangChain.
-5. **AI Engineer: Agentic Track** (6 weeks) — autonomous and multi-agent systems with the OpenAI Agents SDK, CrewAI, LangGraph, AutoGen, MCP and agent loops.
-6. **AI Engineer: Production Track** (4 weeks) — deploying AI to production: Docker, Terraform, GitHub Actions, AWS/GCP/Azure, Vercel, Lambda, App Runner, Bedrock, SageMaker, RAG pipelines, MLOps, observability, user management and subscriptions.
+I operate as a bridge between business, engineering, and operations — end-to-end from requirement analysis and architectural design through evaluation, deployment, and observability. My work spans PoC to production-ready agentic systems.
 
-## Speaking & recognition
-- Regular speaker at O'Reilly and Pearson live events and ODSC workshops; I genuinely love giving talks on Gen AI and Agents.
-- An ODSC Boston agents talk (with Jon Krohn) has been viewed more than 200,000 times.
-- untapt accolades: Accenture FinTech Innovation Lab graduate; American Banker "Top 20 Company to Watch"; voted at an AWS pitch event the "startup most likely to grow exponentially."
-- Featured/interviewed in Forbes (contributor), Fast Company and American Banker, with interviews from the NASDAQ and NYSE floors.
+**Domain expertise:** Enterprise AI platforms for large Telco organizations. I understand both the technology and the organizational dynamics: long specification cycles, multi-stakeholder alignment, regulatory constraints, legacy system integration.
 
-## Career history
-- **IBM (1995–1997)** — Java and Smalltalk developer with IBM Global Services; taught IBM classes on Smalltalk and object technology across Europe.
-- **JPMorgan (1997–2013)** — financial-markets technology in London, New York and Tokyo. Started as a full-stack developer on interest-rate-derivatives risk systems and rose to **Managing Director**, Head of Technology for the Credit Portfolio Group & Hedge Fund Credit in the Investment Bank. Led ~300 Java/Python developers across New York, Houston, London, Glasgow and India, building counterparty credit-risk, CVA, exposure-simulation, electronic trading-limits and credit-stress platforms. (Includes **Cygnifi**, a JPMorgan FinTech spin-off, 2000–2001, where I was engineering lead for interest-rate-derivatives risk.)
-- **untapt (founded 2013)** — Founder & CEO (to 2019), then CTO. My own AI startup, born to solve a problem that plagued me at JPMorgan: why is it so hard to hire engineers? Our core invention was a deep-learning/NLP neural network that understands the fit between candidates and roles, sold as SaaS to recruiters and corporates. Stack: Python/TensorFlow, React/Redux and Angular, Flask, MongoDB, on Google Cloud with Kubernetes. In 2021 untapt was acquired by the Wynden Stark Group (parent of GQR, one of the world's fastest-growing recruitment firms); I served as **CTO of Wynden Stark / GQR (2020–2025)**, and untapt became Nebula.io.
+---
 
-## Education
-**University of Oxford — Physics (1992–1995).**
+## Key Original Ideas
 
-## Skills
-Software engineering; LLMs and Generative/Agentic AI; data science; Python; PyTorch and TensorFlow; technology leadership; entrepreneurship.
+**Vibe Specifying** — using LLMs to translate messy business conversations (meeting notes, transcripts) into precise, testable specifications before coding agents implement them. The insight: agents fail because we don't give them the right context, not because they can't code. Enterprise context is usually not AI-ready by default.
 
-## Personal
-- British, New York-based. I love almost all foods (French food especially), but I'm repelled by nearly all cheese — I'm not allergic, I just hate the taste — with two happy exceptions: cream cheese and mozzarella, which makes cheesecake and pizza the greatest.
-- A self-confessed nerd: weekend coding and LLM tinkering, very amateur electronic-music production, and a steady Hacker News habit. Big Apple-products fan, and I have famously poor hand-eye coordination, so I'm not the outdoorsy type.
+**Enterprise knowledge quality** — "No high-quality knowledge → no effective agents." Enterprise documentation is written for humans, inconsistent, contradictory, and outdated. AI adoption stalls because knowledge bases aren't designed for AI, not because the models aren't capable.
 
-## Links & contact
-- Website: **edwarddonner.com** — also home to *Outsmart*, an arena that pits LLMs against each other in "a battle of diplomacy and deviousness," a Connect Four project, and the AI curriculum.
-- Email: **ed@edwarddonner.com** (also ed.donner@gmail.com)
-- **LinkedIn:** linkedin.com/in/eddonner · **X/Twitter:** @edwarddonner · **YouTube:** youtube.com/@edward.donner
+**Multi-model strategy** — GPT feels disciplined and precise for clear specs; Claude/Sonnet is more creative and exploratory. Enterprise should route different tasks to different models based on their behavioral strengths, not standardize on one vendor.
+
+---
+
+## Current Projects
+
+| Project | Context | Status | Key page |
+|---|---|---|---|
+| **FAT2** | TIM POC — AI-assisted billing document verification (Fatturazione Automatizzata). 7-stage pipeline, 17 doc types, Gemini Flash/Pro, HITL, Golden Dataset eval. | Active | [projects/fat2.md](projects/fat2.md) |
+| **RLM-RAG** | Recursive filesystem RAG — code-writing agent explores structured document hierarchy | Active | [projects/rlm_rag.md](projects/rlm_rag.md) |
+| **RAG Evaluator** | Platform comparing 4 RAG strategies (ChromaDB, Qdrant, Neo4j, agentic) with DeepEval | Active | [projects/rag_evaluator.md](projects/rag_evaluator.md) |
+| **Veritasloop** | Adversarial multi-agent news verification via dialectical debate (LangGraph) | Active | [projects/veritasloop.md](projects/veritasloop.md) |
+| **agent-starter-pack** | Fork of GoogleCloudPlatform's production agent template CLI | Active | [projects/agent_starter_pack.md](projects/agent_starter_pack.md) |
+| **finally** | Ed Donner course capstone — AI trading workstation built entirely by coding agents | Completed | [projects/finally_trading.md](projects/finally_trading.md) |
+
+---
+
+## Knowledge Map
+
+### Solid (can explain, apply, evaluate tradeoffs confidently)
+
+**Enterprise AI & Agentic Platforms** — this is my primary professional domain. I design enterprise AI platforms, understand the organizational dynamics, and have production experience at TIM. My "Vibe Specifying" workflow and enterprise knowledge quality insights are original contributions.
+
+**RAG & Retrieval** — built four strategies from scratch (vector semantic, hybrid, graph, filesystem/agentic), built a full evaluation platform comparing them, implemented recursive code-writing retrieval in RLM-RAG.
+
+**LLM Pipeline Design** — built a full 7-stage enterprise pipeline in FAT2: parser-first/LLM-fallback, partial failure resilience, YAML-driven configuration, Jinja2 prompt templates, confidence scoring, HITL escalation, cost guard, multi-format document loading.
+
+### Learning (actively building depth)
+
+**Agentic Patterns** — built REPL code-writing agent (RLM-RAG), debate loop (Veritasloop), multi-stage pipeline (FAT2). Know ReAct and budget-constrained execution well. Less experience with long-horizon planning (MCTS, tree-of-thought applied to tasks).
+
+**Multi-Agent Systems** — built adversarial debate system with LangGraph (Veritasloop). Course exposure to CrewAI, AutoGen, MCP. Less experience with A2A protocol in production.
+
+**Agent Memory & State** — built filesystem-as-memory, REPL namespace, caching strategies. Less experience with long-term persistent memory (mem0, MemGPT-style).
+
+**Frameworks** — real production experience with LangGraph and LangChain. Course labs on OpenAI Agents SDK, CrewAI, AutoGen, MCP. ADK via agent-starter-pack fork study. Forming honest opinions on when each is right.
+
+**Agent Evaluation** — built DeepEval-based RAG evaluation platform + Golden Dataset framework (FAT2). Gap: LLM-as-judge calibration, trajectory evaluation, eval set design beyond RAG.
+
+**Production & MLOps** — real experience with FastAPI/WebSocket, Docker, Arize Phoenix, circuit breaker, structlog, GitHub Actions CI/CD. Certified Google Professional ML Engineer (LLMOps). Gap: OpenTelemetry from scratch, production cost tracking at scale.
+
+### Priority Gaps
+
+1. **Agent evaluation** — LLM-as-judge calibration, trajectory scoring, building eval sets for non-RAG agents
+2. **Production observability** — OpenTelemetry + Cloud Trace from scratch (not just via scaffolding)
+3. **Agent Engine internals** — session management, built-in tracing, cost model (used via templates, not directly)
+4. **A2A protocol** — beyond conceptual; need to implement
+5. **Cost tracking at scale** — real EUR-per-task tracking in production
+
+---
+
+## Certifications & Completed Learning
+
+| Credential | Issuer | Date |
+|---|---|---|
+| Professional ML Engineer (LLMOps, GenAI) | Google | March 2025 |
+| Professional Cloud Architect | Google | February 2025 |
+| AI Agents Fundamentals | Hugging Face | March 2025 |
+| Complete Agentic AI Engineering | Ed Donner / Udemy | Early 2026 |
+| AI Coder: From Vibe Coder to Agentic Engineer | Ed Donner / Udemy | Early 2026 |
+
+---
+
+## Tech Stack (Regular Use)
+
+**AI/LLM:** Google Gemini (Flash/Pro), Claude (Sonnet/Opus), OpenAI GPT, Vertex AI  
+**Agent frameworks:** LangGraph, LangChain, ADK (via agent-starter-pack)  
+**Evaluation:** DeepEval, custom Golden Dataset framework  
+**Backend:** FastAPI, Python 3.11+, Pydantic, Typer  
+**Document processing:** PyMuPDF, pdfplumber, pytesseract, openpyxl, python-docx  
+**Vector/Graph:** ChromaDB, Qdrant, Neo4j  
+**Frontend:** Streamlit (primary), React (RAG Evaluator, Veritasloop, FAT2 experiments)  
+**Observability:** Arize Phoenix, structlog, Streamlit inspector (custom)  
+**Infra:** Google Cloud, Docker, GitHub Actions, uv  
+**Prompts:** Jinja2 templates  
+
+---
+
+## Learning Goals (Current)
+
+**Competitive edge** — stay ahead of a fast-moving field. This is not gap-filling for a specific project; it's continuous investment in being one of the best GenAI architects in the enterprise space.
+
+**Next priority reads:**
+- *AI Engineering* by Chip Huyen (O'Reilly, 2025) — top priority book
+- ReAct paper (Yao et al., 2022) — read the original
+- Tree of Thoughts paper (Yao et al., 2023)
+- DocETL paper (Shankar et al., VLDB 2025)
+
+**Next skills to build:** see [learning/backlog.md](learning/backlog.md)
+
+---
+
+## People Following (Key)
+
+Full profiles in [learning/people_to_follow.md](learning/people_to_follow.md).
+
+Daily: Simon Willison (simonwillison.net)  
+Weekly: Nate B Jones (Substack), swyx (Latent Space)  
+On-demand: Hamel Husain + Shreya Shankar (evals), Jason Liu (context engineering), Jerry Liu (enterprise docs)  
+Books: Chip Huyen, AI Engineering  
+Research: Shunyu Yao (ReAct, Tree of Thoughts)  
+
+---
+
+## Contact / Profiles
+
+- **LinkedIn:** linkedin.com/in/fabrizio-amort-0196839
+- **GitHub:** github.com/fabrizioamort
+- **Language:** Italian (native), English (B2.2 certified)
+
+---

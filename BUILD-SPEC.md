@@ -1,5 +1,11 @@
 # Avatar — BUILD SPEC (internal build contract)
 
+> **GCP fork (2026-06-02).** Storage is now **Firestore** (Native, default database) via
+> `backend/app/db.py`, and deployment is **Cloud Run** (Secret Manager secrets, ADC auth). The DB
+> module keeps the same public function signatures and row-dict shape, so the API/SSE contract and
+> all module boundaries below are unchanged. Read any Supabase/fly.io references as Firestore /
+> Cloud Run; see `README.md` and `DEPLOY.md` for current setup and deploy.
+
 This is the single source of truth for implementation. It operationalises `SPEC.md` (behaviour),
 the `design-system/` (look & feel), and the verified library idioms. **Read `SPEC.md` and
 `design-system/SKILL.md` first.** Where this file gives exact signatures/contracts, follow them

@@ -268,5 +268,5 @@ Sources: ux-flows.md flows A-G + States matrix, SKILL §3/§4/§5/§8, SPEC UI +
 ## 11. Cleanup (mandated by SPEC Testing)
 
 - [x] All screenshots captured during testing are deleted.
-- [x] Any test conversation threads created via the UI are deleted from Supabase. (messages table verified empty)
+- [x] Any test conversation threads created via the UI are deleted from Firestore. (verified empty)
 - [x] No console errors recorded during the suite remain unexplained. (zero console errors observed)

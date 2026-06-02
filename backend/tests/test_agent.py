@@ -8,7 +8,7 @@ def test_build_system_prompt_uses_knowledge_and_style():
     prompt = agent.build_system_prompt()
     owner = get_settings().owner_name
     assert owner in prompt
-    assert "Nebula.io" in prompt  # from knowledge.md
+    assert "GenAI Architect" in prompt  # from knowledge.md
     assert "self-deprecating" in prompt  # from style.md
     assert "faq_tool" in prompt  # FAQ section + tool usage
 

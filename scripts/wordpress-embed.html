@@ -1,5 +1,5 @@
 <!--
-  Avatar embed for edwarddonner.com/avatar  (paste into a WordPress "Custom HTML" block)
+  Avatar embed for example.com/avatar  (paste into a WordPress "Custom HTML" block)
 
   What it does
   - Pins the app full-bleed just BELOW the site nav (measures the header height, so no top clip).
@@ -8,10 +8,12 @@
   - Forwards a deep link (?q=2 etc.) from the page URL straight into the embedded app.
 
   Cookies / "Keep chat"
-  - Set BASE to https://avatar.edwarddonner.com once that subdomain's DNS + Fly cert are live.
-    Same registrable domain as the host page => the chat cookie is first-party and persists.
-  - https://avatar-ed.fly.dev works immediately but is cross-site, so "Keep chat" won't persist
-    in browsers that block third-party cookies (Safari, Firefox, Chrome).
+  - Set BASE to your Cloud Run URL, e.g. https://avatar-<hash>.<region>.run.app (deploy_gcp.* prints it).
+    This works immediately but is cross-site, so "Keep chat" won't persist in browsers that block
+    third-party cookies (Safari, Firefox, Chrome).
+  - A custom domain is deferred until after the first GCP deployment (see DEPLOY.md). Once you map a
+    subdomain of your own site (e.g. https://avatar.example.com), set BASE to that: same registrable
+    domain as the host page => the chat cookie is first-party and persists.
 -->
 <div id="avatar-embed">
   <iframe id="avatar-frame"
@@ -32,11 +34,11 @@
 
 <script>
 (function () {
-  var BASE = 'https://avatar.edwarddonner.com'; /* same-site as the host page -> first-party cookies */
+  var BASE = 'https://avatar-<hash>.<region>.run.app'; /* your Cloud Run URL; or a same-site subdomain for first-party cookies */
   var box = document.getElementById('avatar-embed');
   var frame = document.getElementById('avatar-frame');
 
-  frame.src = BASE + '/' + location.search;     /* passthrough: edwarddonner.com/avatar?q=2 */
+  frame.src = BASE + '/' + location.search;     /* passthrough: example.com/avatar?q=2 */
 
   function fit() {
     var header = document.querySelector('header, .wp-site-blocks > header, .site-header');

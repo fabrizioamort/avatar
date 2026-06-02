@@ -64,4 +64,4 @@ def test_rate_limit_is_per_conversation(client, monkeypatch):
         from app import db
 
         for cid in cids:
-            db.get_client().table(db.TABLE).delete().eq("conversation_id", cid).execute()
+            db.delete_conversation(cid)

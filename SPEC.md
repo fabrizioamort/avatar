@@ -1,5 +1,12 @@
 # Avatar - Spec
 
+> **GCP fork (2026-06-02).** This fork migrates storage from Supabase to **Google Cloud Firestore**
+> (Native, default database) and deployment from fly.io to **Google Cloud Run** (single container,
+> built by Cloud Build, secrets in Secret Manager, auth via ADC / the `avatar-runtime` service
+> account). Behaviour, the API/SSE contract, and the design system are unchanged. Where the original
+> narrative below mentions Supabase or fly.io, read it as Firestore / Cloud Run; see `README.md` and
+> `DEPLOY.md` for the current setup and deploy steps.
+
 ## Introduction
 
 Avatar is a new version of an online Digital Twin, with a twist.

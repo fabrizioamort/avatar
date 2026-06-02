@@ -33,8 +33,8 @@ class Settings:
     admin_password: str
     pushover_user: str
     pushover_token: str
-    supabase_url: str
-    supabase_key: str
+    gcp_project_id: str
+    firestore_database: str
     session_secret: str
     cookie_secure: bool
     frontend_dist: Path
@@ -45,6 +45,12 @@ class Settings:
 def get_settings() -> Settings:
     """Return cached settings read from the environment."""
     admin_password = _env("ADMIN_PASSWORD")
+    firestore_database = _env("FIRESTORE_DATABASE", "(default)")
+    if firestore_database != "(default)":
+        raise ValueError(
+            "FIRESTORE_DATABASE must be '(default)'; the Firestore free quota only "
+            f"applies to the default database (got {firestore_database!r})."
+        )
     return Settings(
         openrouter_api_key=_env("OPENROUTER_API_KEY"),
         model=_env("MODEL", "openai/gpt-5.4-nano"),
@@ -52,8 +58,8 @@ def get_settings() -> Settings:
         admin_password=admin_password,
         pushover_user=_env("PUSHOVER_USER"),
         pushover_token=_env("PUSHOVER_TOKEN"),
-        supabase_url=_env("SUPABASE_URL"),
-        supabase_key=_env("SUPABASE_KEY"),
+        gcp_project_id=_env("GOOGLE_CLOUD_PROJECT") or _env("GCP_PROJECT_ID"),
+        firestore_database=firestore_database,
         session_secret=_env("SESSION_SECRET") or f"avatar::{admin_password}",
         cookie_secure=_env("COOKIE_SECURE") == "1",
         frontend_dist=Path(_env("FRONTEND_DIST") or REPO_ROOT / "frontend" / "dist"),

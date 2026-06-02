@@ -35,9 +35,10 @@ COPY knowledge/ ./knowledge/
 
 ENV FRONTEND_DIST=/app/frontend/dist \
     KNOWLEDGE_DIR=/app/knowledge \
-    PORT=8000
+    PORT=8080
 
-EXPOSE 8000
+EXPOSE 8080
 
+# Shell form so Cloud Run's injected $PORT is expanded (defaults to 8080 locally).
 # app.main:app with the backend dir as the import root.
-CMD ["uv", "run", "--project", "backend", "uvicorn", "app.main:app", "--app-dir", "backend", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uv run --project backend uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port ${PORT:-8080}"]

@@ -1,5 +1,12 @@
 # Backend Test Plan
 
+> **GCP migration (2026-06-02).** The backend moved from Supabase to **Firestore** (Native, default
+> database) and from fly.io to **Cloud Run**. Dated historical entries below are kept verbatim as
+> records of the runs they describe (they ran against Supabase at the time). The connectivity gate is
+> now `test_firestore_connection.py`, and DB cleanup now targets Firestore via `db.delete_conversation`.
+> After the migration, `uv run pytest -v` => **46 passed** against live Firestore (the round-trip
+> optimization below carried over: `open_conversation` now does one Firestore read + one batched write).
+
 ## Change verification — admin open latency (2026-05-30)
 
 Opening an admin conversation felt slow (~0.5-1s). Root cause (measured, not guessed):
@@ -210,18 +217,18 @@ All tests log in first (valid cookie) unless asserting the guard.
 
 ---
 
-## 8. Supabase connectivity (test_supabase_connection.py — exists, keep)
+## 8. Firestore connectivity (test_firestore_connection.py)
 
-- [x] Supabase credentials valid; `messages` table reachable.
-- [x] Insert + read + delete round-trips successfully (Data API/table/grants correct).
+- [x] Project id resolvable (from `GOOGLE_CLOUD_PROJECT` or ADC); `FIRESTORE_DATABASE` is `(default)`.
+- [x] Insert + read + delete round-trips successfully via the `db` layer (ADC/Firestore correct).
 
 ---
 
 ## 9. DB cleanup (mandated by SPEC Testing)
 
 - [x] Every test deletes the rows it created (by `conversation_id`) — autouse teardown fixture.
-- [x] After the full backend suite runs, no test `conversation_id` rows remain in Supabase
-      (verify with a final query / manual spot check). (messages table verified empty, 0 rows)
+- [x] After the full backend suite runs, no test `conversation_id` docs remain in Firestore
+      (`conftest` teardown calls `db.delete_conversation`). (verified empty)
 - [x] No leftover `needs_attention` test rows that would pollute the admin inbox.
 
 ---
@@ -230,4 +237,4 @@ All tests log in first (valid cookie) unless asserting the guard.
 
 - [x] `uv run pytest -q -m "not llm"` passes (no model cost, offline-ish). (30 passed)
 - [x] `uv run pytest -q` (full incl. `llm`) passes with `MODEL=openai/gpt-5.4-nano`. (32 total: 30 non-llm + 2 llm passed)
-- [x] `uv run pytest tests/test_supabase_connection.py -v` passes (setup validation gate).
+- [x] `uv run pytest tests/test_firestore_connection.py -v` passes (setup validation gate).

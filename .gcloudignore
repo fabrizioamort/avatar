@@ -1,0 +1,27 @@
+# Controls what `gcloud run deploy --source` uploads to Cloud Build.
+# Secrets are never uploaded; they are wired from Secret Manager at deploy time.
+.env
+.env.*
+
+# Node and build outputs (the frontend is built inside the image).
+**/node_modules
+frontend/dist
+
+# Python virtualenvs and caches.
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# Version control and OS cruft.
+.git
+.gitignore
+**/.DS_Store
+
+# Docs, references and tests not needed to build the image.
+design-system/mockups
+design-system/docs
+reference/
+test/

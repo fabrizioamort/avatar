@@ -1,5 +1,11 @@
 # End-to-End Test Plan
 
+> **GCP migration (2026-06-02).** Storage moved from Supabase to **Firestore** (Native, default
+> database) and deployment from fly.io to **Cloud Run**. The dated "Test Results" record below is kept
+> verbatim (it ran against Supabase). Pre-flight gates and cleanup now target Firestore; the local
+> Docker container reaches Firestore via mounted ADC (`GOOGLE_APPLICATION_CREDENTIALS=/gcp/adc.json`).
+> Cloud Run deployment smoke checks live in `DEPLOY.md` §4.
+
 ## Test Results
 
 Method: built and ran the real Docker container. `docker build -t avatar .` succeeded (multi-stage:
@@ -25,7 +31,7 @@ Build the single Docker container via the provided scripts and run the whole pla
 multiple visitors with different `conversation_id`s, the full three-way conversation (visitor +
 avatar + human via `/admin`), and the push-notification path. Use `MODEL=openai/gpt-5.4-nano` to
 keep costs low (SPEC Testing note). Capture multiple screenshots, then clean up screenshots and all
-test conversation threads in Supabase.
+test conversation threads in Firestore.
 
 Sources: SPEC.md Testing + Success Criteria + Setup/Validation, BUILD-SPEC §14/§15 (Docker +
 scripts), §9 API contract, ux-flows A-G, SKILL §9.
@@ -35,9 +41,9 @@ scripts), §9 API contract, ux-flows A-G, SKILL §9.
 ## 0. Pre-flight (SPEC Setup & Validation)
 
 - [x] `.env` has all required keys: `OPENROUTER_API_KEY`, `MODEL`, `OWNER_NAME`, `ADMIN_PASSWORD`,
-      `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `SUPABASE_URL`, `SUPABASE_KEY`.
+      `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `GOOGLE_CLOUD_PROJECT`, `FIRESTORE_DATABASE`.
 - [x] `MODEL=openai/gpt-5.4-nano` for the e2e run (cost control).
-- [x] Supabase connectivity gate passes: `cd backend && uv run pytest tests/test_supabase_connection.py -v`.
+- [x] Firestore connectivity gate passes: `cd backend && uv run pytest tests/test_firestore_connection.py -v`.
 - [x] Docker daemon is running.
 
 ---
@@ -140,7 +146,7 @@ scripts), §9 API contract, ux-flows A-G, SKILL §9.
 
 ## 8. Resilience / sanity
 
-- [ ] Restarting the container preserves conversations (state is in Supabase, not the container). (state is in Supabase; an explicit restart-persistence check was not separately performed)
+- [ ] Restarting the container preserves conversations (state is in Firestore, not the container). (state is in Firestore; an explicit restart-persistence check was not separately performed)
 - [x] `COOKIE_SECURE` unset works over http://localhost (admin login succeeds without HTTPS). (admin login succeeded in-container over http)
 - [x] No unhandled exceptions in container logs across the full run. (clean startup, no tracebacks)
 
@@ -150,7 +156,7 @@ scripts), §9 API contract, ux-flows A-G, SKILL §9.
 
 - [x] Delete ALL screenshots captured during e2e testing.
 - [x] Delete every test conversation thread created (cid-A, cid-B, push-test cids, and any others)
-      from the Supabase `messages` table.
-- [x] Verify the Supabase `messages` table has no leftover test rows. (verified empty, 0 rows)
+      from Firestore (via `db.delete_conversation`).
+- [x] Verify Firestore has no leftover test conversations. (verified empty)
 - [x] Stop and remove the test container (`scripts/stop_mac.sh`).
 - [x] Restore `MODEL` to the intended default if it was changed only for testing (per .env policy). (MODEL stays openai/gpt-5.4-nano per SPEC Q&A #2; no change needed)
