@@ -12,7 +12,17 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://localhost:8000",
-      "/admin": "http://localhost:8000",
+      "/admin": {
+        target: "http://localhost:8000",
+        bypass(req) {
+          // Serve the admin page from Vite in dev; proxy only the admin API
+          // routes (/admin/login, /admin/conversations, ...) to the backend.
+          const path = (req.url ?? "").split("?")[0];
+          if (path === "/admin" || path === "/admin/") {
+            return "/admin.html";
+          }
+        },
+      },
     },
   },
 });

@@ -41,6 +41,7 @@ echo "== Enabling APIs"
 gcloud services enable \
   run.googleapis.com \
   firestore.googleapis.com \
+  aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   secretmanager.googleapis.com \
@@ -79,6 +80,11 @@ fi
 echo "== Granting roles/datastore.user to runtime SA"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$RUNTIME_SA" --role="roles/datastore.user" \
+  --condition=None >/dev/null
+
+echo "== Granting roles/aiplatform.user to runtime SA"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/aiplatform.user" \
   --condition=None >/dev/null
 
 echo "== Secrets (from .env)"

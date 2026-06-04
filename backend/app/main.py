@@ -1,9 +1,11 @@
 """FastAPI app: public + admin APIs, SSE chat, and static frontend serving."""
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.sse import EventSourceResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +41,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Avatar", lifespan=lifespan)
+
+# Dev only: let the static site's local dev origin call /api during development.
+# Public visitor calls are not credentialed, so a plain (no-credentials) CORS
+# allowance is enough. Set DEV_CORS_ORIGINS only in the local .env, never in prod.
+_dev_origins = [o for o in os.getenv("DEV_CORS_ORIGINS", "").split(",") if o]
+if _dev_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_dev_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 api = APIRouter(prefix="/api")
 admin = APIRouter(prefix="/admin")

@@ -38,6 +38,7 @@ Write-Host "== Enabling APIs"
 gcloud services enable `
     run.googleapis.com `
     firestore.googleapis.com `
+    aiplatform.googleapis.com `
     artifactregistry.googleapis.com `
     cloudbuild.googleapis.com `
     secretmanager.googleapis.com `
@@ -79,6 +80,11 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host "== Granting roles/datastore.user to runtime SA"
 gcloud projects add-iam-policy-binding $ProjectId `
     --member="serviceAccount:$RuntimeSa" --role="roles/datastore.user" `
+    --condition=None | Out-Null
+
+Write-Host "== Granting roles/aiplatform.user to runtime SA"
+gcloud projects add-iam-policy-binding $ProjectId `
+    --member="serviceAccount:$RuntimeSa" --role="roles/aiplatform.user" `
     --condition=None | Out-Null
 
 Write-Host "== Secrets (from .env)"
