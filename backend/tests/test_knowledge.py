@@ -6,7 +6,7 @@ from app import knowledge
 def test_knowledge_text_loads():
     text = knowledge.knowledge_text()
     assert text.strip()
-    assert "Ed Donner" in text
+    assert "GenAI" in text
 
 
 def test_style_text_loads():

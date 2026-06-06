@@ -11,7 +11,42 @@ def test_config_returns_owner_name(client):
     assert response.json()["owner_name"] == os.environ.get("OWNER_NAME", "Ed Donner")
 
 
-def test_get_conversation_returns_messages(client, conversation_id):
+def test_create_conversation_returns_signed_session(client):
+    response = client.post("/api/conversations")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["conversation_id"]
+    assert body["conversation_token"]
+
+
+def test_get_conversation_without_token_rejected(client, conversation_id):
+    response = client.get(f"/api/conversations/{conversation_id}")
+    assert response.status_code == 401
+
+
+def test_get_conversation_with_wrong_token_rejected(client, conversation_id):
+    session = client.post("/api/conversations").json()
+    response = client.get(
+        f"/api/conversations/{conversation_id}",
+        headers={"X-Avatar-Conversation-Token": session["conversation_token"]},
+    )
+    assert response.status_code == 403
+
+
+def test_chat_with_wrong_token_rejected(client, conversation_id):
+    session = client.post("/api/conversations").json()
+    response = client.post(
+        "/api/chat",
+        json={
+            "conversation_id": conversation_id,
+            "conversation_token": session["conversation_token"],
+            "message": "hello",
+        },
+    )
+    assert response.status_code == 403
+
+
+def test_get_conversation_returns_messages(client, conversation_id, visitor_token):
     make_conversation(
         conversation_id,
         [
@@ -19,7 +54,10 @@ def test_get_conversation_returns_messages(client, conversation_id):
             {"role": "avatar", "content": "hi, how can I help"},
         ],
     )
-    response = client.get(f"/api/conversations/{conversation_id}")
+    response = client.get(
+        f"/api/conversations/{conversation_id}",
+        headers={"X-Avatar-Conversation-Token": visitor_token},
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["conversation_id"] == conversation_id
@@ -28,7 +66,7 @@ def test_get_conversation_returns_messages(client, conversation_id):
     assert body["messages"][0]["content"] == "hello there"
 
 
-def test_get_conversation_after_filter(client, conversation_id):
+def test_get_conversation_after_filter(client, conversation_id, visitor_token):
     rows = make_conversation(
         conversation_id,
         [
@@ -38,6 +76,9 @@ def test_get_conversation_after_filter(client, conversation_id):
         ],
     )
     first_id = rows[0]["id"]
-    response = client.get(f"/api/conversations/{conversation_id}?after={first_id}")
+    response = client.get(
+        f"/api/conversations/{conversation_id}?after={first_id}",
+        headers={"X-Avatar-Conversation-Token": visitor_token},
+    )
     contents = [m["content"] for m in response.json()["messages"]]
     assert contents == ["second", "third"]

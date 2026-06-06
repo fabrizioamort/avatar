@@ -9,9 +9,14 @@ from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env", override=True)
+os.environ["ADMIN_PASSWORD"] = "test-admin-password-32-chars"
+os.environ["SESSION_SECRET"] = "test-session-secret-32-random-chars"
+os.environ["ENVIRONMENT"] = "production"
 os.environ["COOKIE_SECURE"] = "0"
 
+from app import abuse  # noqa: E402
 from app import db  # noqa: E402
+from app.auth import issue_visitor_token  # noqa: E402
 from app.main import app  # noqa: E402
 
 
@@ -33,12 +38,26 @@ def admin_client(client):
     return client
 
 
+@pytest.fixture(autouse=True)
+def clear_abuse_limits():
+    """Keep in-memory rate-limit state isolated across tests."""
+    abuse.reset_limits()
+    yield
+    abuse.reset_limits()
+
+
 @pytest.fixture
 def conversation_id():
     """A random conversation id whose rows are deleted after the test."""
     cid = str(uuid.uuid4())
     yield cid
     db.delete_conversation(cid)
+
+
+@pytest.fixture
+def visitor_token(conversation_id):
+    """Signed visitor token scoped to the conversation_id fixture."""
+    return issue_visitor_token(conversation_id)
 
 
 def make_conversation(cid: str, messages: list[dict]) -> list[dict]:

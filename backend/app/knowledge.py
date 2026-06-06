@@ -15,8 +15,18 @@ INSTANT_RE = re.compile(r"^q(\d{1,2})$", re.IGNORECASE)
 
 @lru_cache
 def knowledge_text() -> str:
-    """The owner profile (knowledge.md), included in the system prompt."""
-    return (get_settings().knowledge_dir / "knowledge.md").read_text(encoding="utf-8")
+    """The owner profile, loaded from knowledge.md or the structured tree."""
+    root = get_settings().knowledge_dir
+    legacy = root / "knowledge.md"
+    if legacy.exists():
+        return legacy.read_text(encoding="utf-8")
+    parts = []
+    for path in sorted(root.rglob("*.md")):
+        if path.name == "style.md":
+            continue
+        rel = path.relative_to(root).as_posix()
+        parts.append(f"# {rel}\n\n{path.read_text(encoding='utf-8').strip()}")
+    return "\n\n".join(part for part in parts if part.strip())
 
 
 @lru_cache

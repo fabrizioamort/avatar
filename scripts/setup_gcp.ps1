@@ -77,19 +77,46 @@ if ($LASTEXITCODE -eq 0) {
         --display-name="Avatar Cloud Run runtime" --project $ProjectId
 }
 
-Write-Host "== Granting roles/datastore.user to runtime SA"
+Write-Host "== Narrow runtime IAM roles"
+$FirestoreRole = "avatarRuntimeFirestore"
+$FirestorePerms = "datastore.databases.get,datastore.entities.create,datastore.entities.delete,datastore.entities.get,datastore.entities.list,datastore.entities.update"
+gcloud iam roles describe $FirestoreRole --project $ProjectId 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    gcloud iam roles update $FirestoreRole --project $ProjectId `
+        --title="Avatar Firestore runtime" --permissions=$FirestorePerms --stage=GA | Out-Null
+} else {
+    gcloud iam roles create $FirestoreRole --project $ProjectId `
+        --title="Avatar Firestore runtime" --permissions=$FirestorePerms --stage=GA | Out-Null
+}
 gcloud projects add-iam-policy-binding $ProjectId `
-    --member="serviceAccount:$RuntimeSa" --role="roles/datastore.user" `
+    --member="serviceAccount:$RuntimeSa" --role="projects/$ProjectId/roles/$FirestoreRole" `
     --condition=None | Out-Null
 
-Write-Host "== Granting roles/aiplatform.user to runtime SA"
+$VertexRole = "avatarRuntimeVertexPredict"
+$VertexPerms = "aiplatform.endpoints.predict"
+gcloud iam roles describe $VertexRole --project $ProjectId 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    gcloud iam roles update $VertexRole --project $ProjectId `
+        --title="Avatar Vertex prediction runtime" --permissions=$VertexPerms --stage=GA | Out-Null
+} else {
+    gcloud iam roles create $VertexRole --project $ProjectId `
+        --title="Avatar Vertex prediction runtime" --permissions=$VertexPerms --stage=GA | Out-Null
+}
 gcloud projects add-iam-policy-binding $ProjectId `
-    --member="serviceAccount:$RuntimeSa" --role="roles/aiplatform.user" `
+    --member="serviceAccount:$RuntimeSa" --role="projects/$ProjectId/roles/$VertexRole" `
     --condition=None | Out-Null
 
 Write-Host "== Secrets (from .env)"
 foreach ($key in $Secrets) {
     $val = Get-EnvValue $key
+    if (-not $val -and $key -eq "ADMIN_PASSWORD") {
+        $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+        $bytes = New-Object 'System.Byte[]' 24
+        $rng.GetBytes($bytes)
+        $val = [Convert]::ToBase64String($bytes)
+        Write-Host "   $key not in .env; generated a random value. Retrieve it with:"
+        Write-Host "      gcloud secrets versions access latest --secret=$key --project=$ProjectId"
+    }
     if (-not $val -and $key -eq "SESSION_SECRET") {
         $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
         $bytes = New-Object 'System.Byte[]' 32

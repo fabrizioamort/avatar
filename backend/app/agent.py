@@ -6,6 +6,7 @@ replies only as the Avatar.
 """
 
 from collections.abc import AsyncIterator
+from contextvars import ContextVar, Token
 
 from agents import (
     Agent,
@@ -19,9 +20,13 @@ from openai import AsyncOpenAI
 from openai.types.responses import ResponseTextDeltaEvent
 
 from app import knowledge
+from app import abuse
 from app.config import get_settings
 from app.models import Message
 from app.push import push
+
+_push_context: ContextVar[tuple[str, str] | None] = ContextVar("push_context", default=None)
+_push_used: ContextVar[bool] = ContextVar("push_used", default=False)
 
 
 def configure_openrouter() -> None:
@@ -46,6 +51,21 @@ def faq_tool(number: int) -> str:
     return knowledge.find_faq(number)
 
 
+def handle_push_tool(message: str) -> str:
+    """Handle push_tool execution with per-turn and quota guards."""
+    context = _push_context.get()
+    if context is None:
+        return "Notification could not be delivered to the human owner."
+    if _push_used.get():
+        return "Notification already sent for this turn."
+    conversation_id, source_ip = context
+    identity = abuse.RequestIdentity(source_ip=source_ip)
+    if not abuse.enforce_push_request(identity, conversation_id):
+        return "Notification rate limit reached; the human owner was not notified."
+    _push_used.set(True)
+    return push(message)
+
+
 @function_tool
 def push_tool(message: str) -> str:
     """Send a push notification to the human owner (your human twin) so they can follow up.
@@ -53,7 +73,22 @@ def push_tool(message: str) -> str:
     Args:
         message: The note to send to the human owner.
     """
-    return push(message)
+    return handle_push_tool(message)
+
+
+def set_push_context(conversation_id: str, source_ip: str) -> tuple[Token, Token]:
+    """Scope push quotas to the active chat turn."""
+    return (
+        _push_context.set((conversation_id, source_ip)),
+        _push_used.set(False),
+    )
+
+
+def reset_push_context(tokens: tuple[Token, Token]) -> None:
+    """Restore push context after a chat turn."""
+    context_token, used_token = tokens
+    _push_context.reset(context_token)
+    _push_used.reset(used_token)
 
 
 def build_system_prompt(retrieved_knowledge: str = "") -> str:
@@ -130,7 +165,7 @@ def build_agent(retrieved_knowledge: str = "") -> Agent:
     )
 
 
-def render_transcript(rows: list[Message], owner_name: str) -> str:
+def render_transcript(rows: list[Message], owner_name: str, max_chars: int | None = None) -> str:
     """Render prior messages as labelled lines, ending with a reply instruction."""
     lines = []
     for row in rows:
@@ -140,8 +175,30 @@ def render_transcript(rows: list[Message], owner_name: str) -> str:
             lines.append(f"Avatar: {row.content}")
         else:
             lines.append(f"{owner_name} (the human): {row.content}")
+    suffix = "\n\nReply as the Avatar:"
     transcript = "\n".join(lines)
-    return f"{transcript}\n\nReply as the Avatar:"
+    rendered = f"{transcript}{suffix}"
+    limit = max_chars if max_chars is not None else get_settings().max_transcript_chars
+    if len(rendered) <= limit:
+        return rendered
+
+    notice = "[...older conversation omitted...]\n"
+    budget = max(limit - len(suffix), 0)
+    selected: list[str] = []
+    used = 0
+    for line in reversed(lines):
+        extra = len(line) + (1 if selected else 0)
+        if used + extra > budget:
+            break
+        selected.append(line)
+        used += extra
+    if selected:
+        body = "\n".join(reversed(selected))
+    else:
+        body = transcript[-budget:] if budget else ""
+    if len(body) + len(notice) + len(suffix) <= limit:
+        body = f"{notice}{body}"
+    return f"{body}{suffix}"
 
 
 async def stream_agent(transcript: str, retrieved_knowledge: str = "") -> AsyncIterator[dict]:

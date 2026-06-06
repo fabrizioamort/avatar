@@ -1,16 +1,18 @@
 # Avatar
 
-Interact with a digital version of you
-
-## Introduction
-
-This project is a web application for visitors to the site to interact with a Digital Twin of you. During their interaction, you can personally jump in (via an admin panel) and engage with the visitors direcly.
+Interact with a digital twin of you. Visitors chat with an LLM-backed avatar of the site's
+owner, and the owner can jump into any conversation live from an admin panel — a three-way
+chat between visitor, avatar, and human.
 
 Video walk-through: https://youtu.be/srlhW4H-Gtg
 
-## Setup instructions
+- **Architecture & engineering guide:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- **Deployment (Cloud Run):** [`DEPLOY.md`](DEPLOY.md)
+- **Behaviour spec / design system:** [`SPEC.md`](SPEC.md) · [`design-system/`](design-system/)
 
-All secrets live in a single `.env` file in the project root. By the end of this section it should contain:
+## Setup
+
+All secrets live in one `.env` in the project root:
 
 ```
 OPENROUTER_API_KEY=sk-or-v1-...
@@ -21,92 +23,84 @@ PUSHOVER_USER=...
 PUSHOVER_TOKEN=...
 GOOGLE_CLOUD_PROJECT=your-gcp-project-id
 FIRESTORE_DATABASE=(default)
-SESSION_SECRET=a-long-random-string
+SESSION_SECRET=a-long-random-string-at-least-32-chars
 COOKIE_SECURE=0
 ```
 
-`OWNER_NAME` is the name of the person this Digital Twin represents (you). It is shown in the UI - the site header/subtitle, the page title, how the Avatar refers to itself, and on your own messages when you join a conversation from admin (e.g. "Ed Donner - live"). Set it to how you want your name to appear. It is configuration, never hardcoded, so each owner sets their own.
+- `OWNER_NAME` is the name shown throughout the UI (header, title, the avatar's self-reference,
+  and your "live" bubble). It is configuration, never hardcoded — each owner sets their own.
+- `ADMIN_PASSWORD` must be non-blank and at least 16 characters. `SESSION_SECRET` must be
+  non-blank and at least 32 random characters; it signs admin cookies and visitor conversation
+  tokens. The app fails closed at startup if either secret is missing or weak. `COOKIE_SECURE`
+  is `0` for local http, `1` in production (set automatically on deploy).
+- `GOOGLE_CLOUD_PROJECT` is your project id; `FIRESTORE_DATABASE` must be `(default)` (the free
+  quota only applies to the default database).
+- The `RAG_*` knobs are optional and default sensibly in `backend/app/config.py`.
 
-`SESSION_SECRET` signs the admin session cookie. It is optional locally - if unset, it is derived from `ADMIN_PASSWORD` - but set it to a long random value (e.g. run `openssl rand -hex 32`) so that changing your admin password later does not invalidate live admin sessions. `COOKIE_SECURE` gates whether that cookie requires HTTPS: leave it `0` (or unset) for local http; it is set to `1` automatically in production (see [Deploy to Cloud Run](#deploy-to-cloud-run)).
+### 1. OpenRouter
 
-`GOOGLE_CLOUD_PROJECT` is your Google Cloud project id; `FIRESTORE_DATABASE` must be `(default)` (the Firestore free quota only applies to the default database). Both are set up in the next section.
+The avatar's LLM calls go through [OpenRouter](https://openrouter.ai). Create a key under
+[Keys](https://openrouter.ai/keys), add it to `.env` as `OPENROUTER_API_KEY`, and add a little
+credit. `openai/gpt-5.4-nano` is cheap for development; use a stronger model (e.g.
+`openai/gpt-5.4-mini`) for a live site by setting `MODEL`.
 
-The `RAG_*` variables (knowledge retrieval) are all optional and have sensible defaults in `backend/app/config.py`; you only need to set them to override the defaults. See [Knowledge retrieval (RAG)](#knowledge-retrieval-rag) below.
+### 2. Google Cloud (Firestore)
 
-### OpenRouter
+Conversations are stored in **Firestore** (Native mode) — no schema to create. You need the
+[`gcloud` CLI](https://cloud.google.com/sdk/docs/install) and a project with billing enabled
+(it sits comfortably in the free tier for a personal site).
 
-The Avatar's LLM calls go through [OpenRouter](https://openrouter.ai). If you already have a key in `.env`, skip this.
+```
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+gcloud auth application-default login        # ADC: how the app authenticates locally
+```
 
-1. Go to https://openrouter.ai and sign in (or sign up).
-2. Click your avatar (top right) and choose **Keys**, or go straight to https://openrouter.ai/keys.
-3. Click **Create Key**, give it a name (e.g. `avatar`), and click **Create**.
-4. Copy the key (it starts with `sk-or-v1-`) and add it to `.env`:
-   ```
-   OPENROUTER_API_KEY=sk-or-v1-...
-   ```
-5. Add some credit under **Settings > Credits** if your account has none. The Avatar uses the model in `MODEL`. `openai/gpt-5.4-nano` is very cheap and good for development and testing; for a live site, consider a stronger model such as `openai/gpt-5.4-mini` (just set `MODEL` accordingly).
-
-### Google Cloud (Firestore)
-
-Conversations are stored in **Firestore** (Native mode) on Google Cloud. There is no SQL or schema to create - the backend writes documents directly. You need the `gcloud` CLI ([install guide](https://cloud.google.com/sdk/docs/install)) and a Google Cloud project with billing enabled (Firestore, Cloud Run, and the rest sit comfortably inside the free tier for a personal site).
-
-#### 1. Create a project and log in
-
-1. Create a project at https://console.cloud.google.com/projectcreate (or reuse one), and note its **project id**.
-2. Log in and set the project locally:
-   ```
-   gcloud auth login
-   gcloud config set project YOUR_PROJECT_ID
-   ```
-3. Authorize **Application Default Credentials** (ADC) - this is how the app authenticates to Firestore locally (and how the local Docker container does, by mounting the ADC file):
-   ```
-   gcloud auth application-default login
-   ```
-4. Add the project id to `.env`:
-   ```
-   GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID
-   FIRESTORE_DATABASE=(default)
-   ```
-
-#### 2. Provision Firestore and the rest with the setup script
-
-The repo ships an idempotent setup script that enables the required APIs, creates the **default** Firestore Native database, the Artifact Registry repo, the Cloud Run runtime service account, and the Secret Manager secrets (read from `.env`). Run it once:
+Then run the idempotent setup script once to enable APIs and provision Firestore (default
+database), Artifact Registry, the `avatar-runtime` service account, and Secret Manager secrets:
 
 - macOS / Linux: `PROJECT_ID=YOUR_PROJECT_ID ./scripts/setup_gcp.sh`
 - Windows: `.\scripts\setup_gcp.ps1 -ProjectId YOUR_PROJECT_ID`
 
-It defaults to region `europe-west8` (Milan); pass `REGION=...` / `-Region ...` to choose another. **Firestore's location is permanent**, so the script confirms before creating the database. (If you only want local development, you can instead create just the database: `gcloud firestore databases create --database="(default)" --location=YOUR_REGION --type=firestore-native`.)
+It defaults to region `europe-west8` (override with `REGION`/`-Region`). **Firestore's location
+is permanent**, so it confirms before creating the database. Authentication is ADC end to end —
+no service-account JSON key is ever created or committed.
 
-Firestore stores one document per message under `conversations/{conversation_id}/messages/{seq}`, plus a parent `conversations/{conversation_id}` aggregate that powers the admin inbox in a single read per conversation. Each message document carries `conversation_id`, `conversation_name`, `role` (`visitor`/`avatar`/`human`), `content`, `tool_calls`, `needs_attention`, `read`, `created_at`, and a per-conversation integer `id`.
-
-> Authentication uses ADC end to end - no service-account JSON key is ever created, committed, or baked into the image. Locally you use your own ADC; on Cloud Run the app runs as the `avatar-runtime` service account.
-
-### Validate the setup
-
-Before running the app, confirm Firestore is reachable and writable with the connectivity test:
+### 3. Validate
 
 ```
 cd backend && uv run pytest tests/test_firestore_connection.py -v
 ```
 
-All tests must pass. They check that a project id is resolvable (from `GOOGLE_CLOUD_PROJECT` or ADC), that `FIRESTORE_DATABASE` is `(default)`, and that a message can be inserted, read back (with the expected fields, including `needs_attention`, `read`, and `tool_calls`), and deleted. If a test fails, re-check the `gcloud` login / ADC steps and that the default database exists.
+All tests must pass before proceeding: they confirm the project id resolves, the database is
+`(default)`, and a message can be written, read back, and deleted.
 
-## Personalize the twin (the `knowledge/` folder)
+## Personalize the twin (`knowledge/`)
 
-The twin's knowledge and voice come from a few files in `knowledge/`, read into the system prompt at runtime. Edit these to make the twin yours:
+The twin's knowledge and voice come from a few files read into the system prompt at runtime:
 
-- **`knowledge.md`** - a rich, first-person profile of you (background, work, courses, skills, personal notes). The main "who I am" source. It is chunked, embedded, and retrieved per turn (see [Knowledge retrieval (RAG)](#knowledge-retrieval-rag)) rather than pasted into the prompt wholesale.
-- **`style.md`** - how the twin should sound: voice and personality, formatting rules, and safety/guardrail rules for answering on the public internet. This stays in the system prompt verbatim (not embedded).
-- **`faq.jsonl`** - one JSON object per line. Each row has `faq` (number), `question` (the full question), `answer` (the full answer, in markdown), and `query` (a short, precise phrasing used only for routing). The prompt lists the `query` phrasings so the model can match a visitor's question to a number; the FAQ tool and the `Qn` shortcut then return the full original question and answer. Visitors can also type a bare `Qn` (e.g. `Q2`) for an instant answer with no LLM call, and a deep link like `…/?q=2` opens the chat and immediately asks Q2 (handy for sharing a direct answer or embedding).
-- **`pic.jpg`** - your photo, used for the human avatar; a robotic variant is used for the twin (see `design-system/docs/avatar-generation.md`).
+- **`knowledge.md`** — a first-person profile of you. Chunked, embedded, and retrieved per turn
+  (see RAG below) rather than pasted into the prompt wholesale.
+- **`style.md`** — voice, formatting, and safety rules. Stays in the prompt verbatim.
+- **`faq.jsonl`** — one JSON object per line (`faq`, `question`, `answer`, and a short `query`
+  used for routing). Visitors can type a bare `Qn` (e.g. `Q2`) for an instant answer with no
+  LLM call, and a deep link like `…/?q=2` opens the chat and asks Q2 directly.
+- **`pic.jpg`** — your photo (the human avatar); a robotic variant is the twin (see
+  `design-system/docs/avatar-generation.md`).
 
-(Earlier versions used `summary.txt` and a `linkedin.pdf`; these have been replaced by `knowledge.md` and `style.md`.)
+A few owner-specific bits live in the frontend: the footer social links in
+`frontend/index.html` and the avatar images in `frontend/public/`.
 
 ### Knowledge retrieval (RAG)
 
-The profile in `knowledge.md` is served to the Avatar by **Retrieval-Augmented Generation**: it is split into chunks, each embedded with Vertex AI (`gemini-embedding-001`, 768 dims) and stored in a Firestore `knowledge_chunks` collection. On each non-FAQ turn the visitor's message is embedded and the nearest chunks (Firestore Vector Search, cosine distance) are injected into the system prompt. `Qn` instant answers and the `faq_tool` are unchanged and never hit RAG. If no chunk is confident enough, the full `knowledge.md` is used as a fallback.
+`knowledge.md` is served by Retrieval-Augmented Generation: chunks embedded with Vertex AI
+(`gemini-embedding-001`, 768d) and stored in a Firestore `knowledge_chunks` collection. Each
+non-FAQ turn embeds the visitor's message and injects the nearest chunks (Firestore Vector
+Search, cosine distance) into the prompt, falling back to the full profile if nothing is
+confident enough. `Qn` and `faq_tool` never hit RAG. See [`ARCHITECTURE.md`](ARCHITECTURE.md)
+for the full pipeline.
 
-One-time, create the vector index (needs the index for `is_active` + `embedding`):
+Create the vector index once:
 
 ```bash
 gcloud firestore indexes composite create \
@@ -117,68 +111,64 @@ gcloud firestore indexes composite create \
   --database="(default)"
 ```
 
-Then ingest the knowledge (re-run after any edit to `knowledge.md`; unchanged chunks are skipped, deleted ones are marked inactive):
+Then ingest (re-run after any edit to `knowledge.md`; unchanged chunks are skipped):
 
 ```bash
 cd backend
-uv run python scripts/ingest_knowledge.py --dry-run   # preview what would change
+uv run python scripts/ingest_knowledge.py --dry-run   # preview
 uv run python scripts/ingest_knowledge.py             # embed + write
 uv run python scripts/eval_retrieval.py               # optional: hit@1/hit@3/MRR
 ```
 
-Ingestion runs locally against your Firestore project (ADC, same as the connectivity test); there is no admin endpoint or scheduler in v1. Embeddings are inexpensive at this scale but are billed usage, not free — keep a budget alert (see [DEPLOY.md](DEPLOY.md)). If you change `RAG_EMBEDDING_DIM`, recreate the index and re-ingest with `--force-reembed`.
+Embeddings are billed usage (tiny at this scale); keep a budget alert. If you change
+`RAG_EMBEDDING_DIM`, recreate the index and re-ingest with `--force-reembed`.
 
-A couple of owner-specific bits live in the frontend rather than `.env`: the **footer social links** in `frontend/index.html` point to the owner's LinkedIn and YouTube (update them to your own), and the avatar images in `frontend/public/` are generated from `pic.jpg` (see `design-system/docs/avatar-generation.md`). The background texture can also be swapped (rings / crosses / grid) via the `--grid-mark` token in `frontend/src/styles/tokens.css` — see `design-system/docs/background-texture.md`. The brand subtitle and any owner-specific copy are currently set for the default owner, so review those too when making the twin your own.
+## Running
 
-## Running the app
+**Docker (recommended).** Builds and runs the single container with your root `.env`:
 
-### Docker (recommended)
+- macOS / Linux: `./scripts/start_mac.sh` (stop with `./scripts/stop_mac.sh`)
+- Windows: `./scripts/start_pc.ps1` (stop with `./scripts/stop_pc.ps1`)
 
-The app builds and runs as a single container. From the project root:
+Then open http://localhost:8000 (admin at `/admin`). Docker must be running.
 
-- macOS / Linux: `./scripts/start_mac.sh` to build and run, `./scripts/stop_mac.sh` to stop.
-- Windows: `./scripts/start_pc.ps1` to build and run, `./scripts/stop_pc.ps1` to stop.
-
-The start script stops any existing `avatar` container, rebuilds the image, and runs it with your root `.env`. When it finishes, open http://localhost:8000 (admin at http://localhost:8000/admin). Docker must be running.
-
-### Local development
-
-Run the backend and frontend in two terminals.
-
-Backend (FastAPI on port 8000):
+**Local development.** Backend and frontend in two terminals:
 
 ```
-cd backend
-uv run uvicorn app.main:app --reload --app-dir .
+cd backend && uv run uvicorn app.main:app --reload --app-dir .
+cd frontend && npm install && npm run dev
 ```
 
-Frontend (Vite dev server):
-
-```
-cd frontend
-npm install
-npm run dev
-```
-
-Open the URL Vite prints. The Vite dev server proxies `/api` to the backend on http://localhost:8000, so run the backend alongside it. The visitor page (`/`) gets hot reload from Vite; `/admin` is proxied to the backend, so to preview admin changes, build the frontend (`npm run build`) and load `http://localhost:8000/admin` from the backend.
-
-The visitor chat and the admin dashboard are both responsive (mobile and desktop, dark and light).
+Vite proxies `/api` to the backend, so run both. The visitor page gets hot reload; for admin,
+build the frontend (`npm run build`) and load `/admin` from the backend.
 
 ## Deploy to Cloud Run
 
-The same single container deploys to **Google Cloud Run**. The full guide - free-tier notes, the runtime service account, secrets, the smoke-test checklist, and the (optional) custom domain - is in **[DEPLOY.md](DEPLOY.md)**. In short:
+The same container deploys to **Google Cloud Run**. After the setup script (above) and a fully
+populated `.env`:
 
-1. Run the setup script once (see [Google Cloud (Firestore)](#google-cloud-firestore) above) so the APIs, Firestore, the `avatar-runtime` service account, and the Secret Manager secrets all exist.
-2. Make sure `.env` is fully populated. The setup script copies your secrets into Secret Manager; they are never baked into the image.
-3. Deploy from source:
-   - macOS / Linux: `PROJECT_ID=YOUR_PROJECT_ID ./scripts/deploy_gcp.sh`
-   - Windows: `.\scripts\deploy_gcp.ps1 -ProjectId YOUR_PROJECT_ID`
-4. The script runs `gcloud run deploy --source .` (build via Cloud Build), wires the secrets from Secret Manager, sets `COOKIE_SECURE=1`, and deploys with `min-instances=0` / `max-instances=1` (free-tier friendly; see DEPLOY.md for the tradeoffs).
-5. The app is then live at the generated `https://<service>-<hash>.<region>.run.app` URL the script prints (admin at `/admin`).
+- macOS / Linux: `PROJECT_ID=YOUR_PROJECT_ID ./scripts/deploy_gcp.sh`
+- Windows: `.\scripts\deploy_gcp.ps1 -ProjectId YOUR_PROJECT_ID`
 
-Putting the app on your own website is **optional** - the `run.app` URL works on its own. A custom domain is deferred in v1 (Cloud Run's recommended custom-domain path uses an external load balancer, which is not free-tier friendly); see [DEPLOY.md](DEPLOY.md) and `scripts/wordpress-embed.html` for a paste-ready embed snippet.
+The script builds via Cloud Build, wires secrets from Secret Manager, sets `COOKIE_SECURE=1`,
+sets `ENVIRONMENT=production` / `TRUST_PROXY_HEADERS=1`, and deploys with
+`min-instances=0` / `max-instances=1`. It prints the live
+`https://<service>-<hash>.<region>.run.app` URL. Full guide and smoke-test checklist:
+[`DEPLOY.md`](DEPLOY.md).
 
 ## Built-in protections
 
-The backend guards your API key automatically, with no configuration: visitor messages longer than 20,000 characters are truncated (with a short note appended) before being stored or sent to the model, and more than 20 messages per minute from a single conversation are rejected (HTTP 429, with a friendly slow-down message in the chat) before any model call is made.
+The backend guards paid resources before Firestore writes, RAG retrieval, LLM calls, or
+Pushover calls:
 
+- Visitor sessions are server-issued and signed; public reads and chat posts require a token
+  scoped to the same conversation id.
+- Chat is rate-limited by source IP, globally, by conversation id, and by an hourly service
+  budget. These limits are in memory, so `max-instances=1` is part of the security model until
+  you move them to Firestore, Redis, or another shared store.
+- Visitor messages over 4,000 characters are truncated, long conversation histories are capped,
+  and the transcript sent to the model is bounded.
+- Admin login and Pushover notification attempts have separate rate limits.
+
+Also configure provider-side backstops: an OpenRouter spend cap or credit limit, a low GCP
+budget alert, and Pushover quota monitoring.

@@ -19,18 +19,23 @@ def _parse_sse(text: str) -> list[dict]:
     return events
 
 
-def _post_chat(client, conversation_id: str, message: str) -> list[dict]:
+def _post_chat(client, conversation_id: str, visitor_token: str, message: str) -> list[dict]:
     with client.stream(
         "POST",
         "/api/chat",
-        json={"conversation_id": conversation_id, "message": message, "visitor_name": "ZZ"},
+        json={
+            "conversation_id": conversation_id,
+            "conversation_token": visitor_token,
+            "message": message,
+            "visitor_name": "ZZ",
+        },
     ) as response:
         assert response.status_code == 200
         body = "".join(response.iter_text())
     return _parse_sse(body)
 
 
-def test_qn_bypasses_rag(client, conversation_id, monkeypatch):
+def test_qn_bypasses_rag(client, conversation_id, visitor_token, monkeypatch):
     """A bare Qn instant answer must not trigger retrieval or the agent."""
     called = {"retrieve": False, "stream": False}
 
@@ -45,7 +50,7 @@ def test_qn_bypasses_rag(client, conversation_id, monkeypatch):
     monkeypatch.setattr(rag_service, "retrieve_knowledge", fake_retrieve)
     monkeypatch.setattr(agent, "stream_agent", fake_stream)
 
-    events = _post_chat(client, conversation_id, "Q2")
+    events = _post_chat(client, conversation_id, visitor_token, "Q2")
     types = [e["type"] for e in events]
     assert "instant" in types
     assert types[-1] == "done"
@@ -53,7 +58,7 @@ def test_qn_bypasses_rag(client, conversation_id, monkeypatch):
     assert called["stream"] is False
 
 
-def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, monkeypatch):
+def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, visitor_token, monkeypatch):
     """A normal message retrieves context and forwards it to the agent stream."""
     captured = {}
 
@@ -82,7 +87,7 @@ def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, mon
     monkeypatch.setattr(rag_service, "retrieve_knowledge", fake_retrieve)
     monkeypatch.setattr(agent, "stream_agent", fake_stream)
 
-    events = _post_chat(client, conversation_id, "Tell me about your work")
+    events = _post_chat(client, conversation_id, visitor_token, "Tell me about your work")
     types = [e["type"] for e in events]
     assert "token" in types
     assert types[-1] == "done"
@@ -97,7 +102,12 @@ def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, mon
     assert rows[-1]["content"] == "Hi there"
 
 
-def test_chat_falls_back_to_static_knowledge_when_no_chunks(client, conversation_id, monkeypatch):
+def test_chat_falls_back_to_static_knowledge_when_no_chunks(
+    client,
+    conversation_id,
+    visitor_token,
+    monkeypatch,
+):
     """When retrieval returns nothing, the static profile is used as a fallback."""
     captured = {}
 
@@ -109,7 +119,7 @@ def test_chat_falls_back_to_static_knowledge_when_no_chunks(client, conversation
 
     monkeypatch.setattr(agent, "stream_agent", fake_stream)
 
-    _post_chat(client, conversation_id, "Anything at all")
+    _post_chat(client, conversation_id, visitor_token, "Anything at all")
     from app import knowledge
 
     assert captured["retrieved"] == knowledge.knowledge_text()

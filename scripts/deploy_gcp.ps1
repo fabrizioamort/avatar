@@ -39,7 +39,7 @@ Write-Host "Deploying '$ServiceName' to Cloud Run ($Region, project $ProjectId).
 # Artifact Registry repo. min-instances=0 (cold starts ok, no idle billing).
 # max-instances=1 keeps the in-memory rate limiter correct. --cpu-throttling
 # selects request-based billing (CPU only allocated while serving).
-$envVars = "^@^MODEL=$Model@OWNER_NAME=$OwnerName@COOKIE_SECURE=1@GOOGLE_CLOUD_PROJECT=$ProjectId@FIRESTORE_DATABASE=(default)"
+$envVars = "^@^MODEL=$Model@OWNER_NAME=$OwnerName@ENVIRONMENT=production@COOKIE_SECURE=1@TRUST_PROXY_HEADERS=1@GOOGLE_CLOUD_PROJECT=$ProjectId@FIRESTORE_DATABASE=(default)"
 $secrets = "OPENROUTER_API_KEY=OPENROUTER_API_KEY:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest,PUSHOVER_USER=PUSHOVER_USER:latest,PUSHOVER_TOKEN=PUSHOVER_TOKEN:latest,SESSION_SECRET=SESSION_SECRET:latest"
 
 gcloud run deploy $ServiceName `

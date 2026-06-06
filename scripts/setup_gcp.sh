@@ -77,19 +77,41 @@ else
     --display-name="Avatar Cloud Run runtime" --project "$PROJECT_ID"
 fi
 
-echo "== Granting roles/datastore.user to runtime SA"
+echo "== Narrow runtime IAM roles"
+FIRESTORE_ROLE="avatarRuntimeFirestore"
+FIRESTORE_PERMS="datastore.databases.get,datastore.entities.create,datastore.entities.delete,datastore.entities.get,datastore.entities.list,datastore.entities.update"
+if gcloud iam roles describe "$FIRESTORE_ROLE" --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud iam roles update "$FIRESTORE_ROLE" --project "$PROJECT_ID" \
+    --title="Avatar Firestore runtime" --permissions="$FIRESTORE_PERMS" --stage=GA >/dev/null
+else
+  gcloud iam roles create "$FIRESTORE_ROLE" --project "$PROJECT_ID" \
+    --title="Avatar Firestore runtime" --permissions="$FIRESTORE_PERMS" --stage=GA >/dev/null
+fi
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$RUNTIME_SA" --role="roles/datastore.user" \
+  --member="serviceAccount:$RUNTIME_SA" --role="projects/$PROJECT_ID/roles/$FIRESTORE_ROLE" \
   --condition=None >/dev/null
 
-echo "== Granting roles/aiplatform.user to runtime SA"
+VERTEX_ROLE="avatarRuntimeVertexPredict"
+VERTEX_PERMS="aiplatform.endpoints.predict"
+if gcloud iam roles describe "$VERTEX_ROLE" --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud iam roles update "$VERTEX_ROLE" --project "$PROJECT_ID" \
+    --title="Avatar Vertex prediction runtime" --permissions="$VERTEX_PERMS" --stage=GA >/dev/null
+else
+  gcloud iam roles create "$VERTEX_ROLE" --project "$PROJECT_ID" \
+    --title="Avatar Vertex prediction runtime" --permissions="$VERTEX_PERMS" --stage=GA >/dev/null
+fi
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$RUNTIME_SA" --role="roles/aiplatform.user" \
+  --member="serviceAccount:$RUNTIME_SA" --role="projects/$PROJECT_ID/roles/$VERTEX_ROLE" \
   --condition=None >/dev/null
 
 echo "== Secrets (from .env)"
 for key in "${SECRETS[@]}"; do
   val="$(env_value "$key")"
+  if [ -z "$val" ] && [ "$key" = "ADMIN_PASSWORD" ]; then
+    val="$(python3 -c 'import secrets;print(secrets.token_urlsafe(24))' 2>/dev/null || openssl rand -base64 32)"
+    echo "   $key not in .env; generated a random value. Retrieve it with:"
+    echo "      gcloud secrets versions access latest --secret=$key --project=$PROJECT_ID"
+  fi
   if [ -z "$val" ] && [ "$key" = "SESSION_SECRET" ]; then
     val="$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))' 2>/dev/null || openssl rand -base64 32)"
     echo "   $key not in .env; generated a random value."

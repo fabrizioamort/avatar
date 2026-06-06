@@ -101,6 +101,7 @@ def _insert_in_transaction(
             "last_id": seq,
             "last_seq": seq,
             "message_count": parent.get("message_count", 0) + 1,
+            f"{role}_message_count": parent.get(f"{role}_message_count", 0) + 1,
             "unread": parent.get("unread", False) or (role != "human" and not read),
             "needs_attention": parent.get("needs_attention", False) or needs_attention,
         },
@@ -115,6 +116,11 @@ def get_messages(conversation_id: str, after_id: int | None = None) -> list[dict
     if after_id is not None:
         query = query.where(filter=FieldFilter("id", ">", after_id))
     return [doc.to_dict() for doc in query.stream()]
+
+
+def get_conversation_meta(conversation_id: str) -> dict:
+    """Parent aggregate for cheap preflight checks."""
+    return _conversation_ref(conversation_id).get().to_dict() or {}
 
 
 def list_conversations() -> list[dict]:

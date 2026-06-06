@@ -1,30 +1,31 @@
 """FastAPI app: public + admin APIs, SSE chat, and static frontend serving."""
 
 import os
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, Cookie, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.sse import EventSourceResponse
 from fastapi.staticfiles import StaticFiles
-from limits import parse
-from limits.storage import MemoryStorage
-from limits.strategies import MovingWindowRateLimiter
 
-from app import agent, db, knowledge, rag_service
+from app import abuse, agent, db, knowledge, rag_service
 from app.auth import (
     clear_session_cookie,
+    issue_visitor_token,
     is_authenticated,
     require_admin,
     set_session_cookie,
+    verify_visitor_token,
     verify_password,
 )
 from app.config import get_settings
 from app.models import (
     ChatRequest,
     ConfigResponse,
+    ConversationSession,
     ConversationSummary,
     ConversationThread,
     HumanMessageRequest,
@@ -60,29 +61,38 @@ admin = APIRouter(prefix="/admin")
 
 # ---- Abuse guards (cheap protection for the API key) ----
 
-MAX_MESSAGE_CHARS = 20_000
+MAX_MESSAGE_CHARS = get_settings().max_message_chars
 TRUNCATION_NOTE = (
     "[...message truncated as it's too long; ask the visitor to send something more concise]"
 )
 
-# At most 20 messages/minute per conversation_id. In-memory (per process) is enough:
-# OpenRouter caps overall spend, and a browser's requests stick to one machine.
-_rate_limiter = MovingWindowRateLimiter(MemoryStorage())
-_chat_rate = parse("20/minute")
-
 
 def clamp_message(text: str) -> str:
     """Cap over-long visitor input so a single paste can't run up LLM token spend."""
-    if len(text) <= MAX_MESSAGE_CHARS:
+    limit = get_settings().max_message_chars
+    if len(text) <= limit:
         return text
-    return text[:MAX_MESSAGE_CHARS] + " " + TRUNCATION_NOTE
+    return text[:limit] + " " + TRUNCATION_NOTE
 
 
-async def enforce_chat_rate_limit(request: Request) -> None:
-    """Reject more than 20 chat messages per minute from one conversation_id."""
+async def enforce_public_chat_guard(request: Request) -> None:
+    """Reject invalid or abusive chat before writes, RAG, or model calls."""
     body = await request.json()
-    if not _rate_limiter.hit(_chat_rate, str(body.get("conversation_id", ""))):
-        raise HTTPException(status_code=429, detail="Too many messages; please slow down.")
+    conversation_id = str(body.get("conversation_id", ""))
+    token = body.get("conversation_token")
+    if not verify_visitor_token(conversation_id, token if isinstance(token, str) else None):
+        raise HTTPException(status_code=403, detail="Invalid conversation session.")
+
+    identity = abuse.identify_request(request)
+    abuse.enforce_chat_request(identity, conversation_id)
+
+    meta = db.get_conversation_meta(conversation_id)
+    if meta.get("message_count", 0) >= get_settings().max_conversation_messages:
+        raise HTTPException(
+            status_code=429,
+            detail="This conversation is too long; please start a new one.",
+        )
+    request.state.source_ip = identity.source_ip
 
 
 # ---- Public API ----
@@ -94,9 +104,27 @@ def get_config() -> ConfigResponse:
     return ConfigResponse(owner_name=get_settings().owner_name)
 
 
+@api.post("/conversations", response_model=ConversationSession)
+def create_conversation() -> ConversationSession:
+    """Create a server-issued visitor conversation session."""
+    conversation_id = str(uuid.uuid4())
+    return ConversationSession(
+        conversation_id=conversation_id,
+        conversation_token=issue_visitor_token(conversation_id),
+    )
+
+
 @api.get("/conversations/{conversation_id}", response_model=ConversationThread)
-def get_conversation(conversation_id: str, after: int | None = None) -> ConversationThread:
+def get_conversation(
+    conversation_id: str,
+    after: int | None = None,
+    conversation_token: str | None = Header(default=None, alias="X-Avatar-Conversation-Token"),
+) -> ConversationThread:
     """Full thread (all roles) for restore-from-cookie and visitor polling."""
+    if not conversation_token:
+        raise HTTPException(status_code=401, detail="Missing conversation session.")
+    if not verify_visitor_token(conversation_id, conversation_token):
+        raise HTTPException(status_code=403, detail="Invalid conversation session.")
     rows = db.get_messages(conversation_id, after_id=after)
     return ConversationThread(
         conversation_id=conversation_id,
@@ -105,7 +133,7 @@ def get_conversation(conversation_id: str, after: int | None = None) -> Conversa
     )
 
 
-async def _chat_events(request: ChatRequest) -> AsyncIterator[dict]:
+async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[dict]:
     """Drive a chat turn and yield wire events for the SSE stream."""
     settings = get_settings()
     message = clamp_message(request.message)
@@ -133,6 +161,7 @@ async def _chat_events(request: ChatRequest) -> AsyncIterator[dict]:
 
     retrieved_text = ""
     if settings.rag_enabled:
+        yield {"type": "phase", "phase": "searching"}
         retrieved = rag_service.retrieve_knowledge(message)
         retrieved_text = rag_service.format_retrieved_context(retrieved)
     if not retrieved_text:
@@ -140,29 +169,35 @@ async def _chat_events(request: ChatRequest) -> AsyncIterator[dict]:
         retrieved_text = knowledge.knowledge_text()
 
     rows = [Message(**r) for r in db.get_messages(request.conversation_id)]
-    transcript = agent.render_transcript(rows, settings.owner_name)
-    async for event in agent.stream_agent(transcript, retrieved_text):
-        if event["type"] == "_final":
-            tool_names = [tc["tool"] for tc in event["tool_calls"]]
-            needs_attention = "push_tool" in tool_names
-            row = db.insert_message(
-                request.conversation_id,
-                "avatar",
-                event["text"],
-                tool_calls=event["tool_calls"] or None,
-                needs_attention=needs_attention,
-                read=not needs_attention,
-            )
-            yield {"type": "done", "message_id": row["id"], "needs_attention": needs_attention}
-        else:
-            yield event
+    transcript = agent.render_transcript(rows, settings.owner_name, settings.max_transcript_chars)
+    yield {"type": "phase", "phase": "thinking"}
+    push_tokens = agent.set_push_context(request.conversation_id, source_ip)
+    try:
+        async for event in agent.stream_agent(transcript, retrieved_text):
+            if event["type"] == "_final":
+                tool_names = [tc["tool"] for tc in event["tool_calls"]]
+                needs_attention = "push_tool" in tool_names
+                row = db.insert_message(
+                    request.conversation_id,
+                    "avatar",
+                    event["text"],
+                    tool_calls=event["tool_calls"] or None,
+                    needs_attention=needs_attention,
+                    read=not needs_attention,
+                )
+                yield {"type": "done", "message_id": row["id"], "needs_attention": needs_attention}
+            else:
+                yield event
+    finally:
+        agent.reset_push_context(push_tokens)
 
 
-@api.post("/chat", response_class=EventSourceResponse, dependencies=[Depends(enforce_chat_rate_limit)])
-async def chat(request: ChatRequest) -> AsyncIterator[dict]:
+@api.post("/chat", response_class=EventSourceResponse, dependencies=[Depends(enforce_public_chat_guard)])
+async def chat(request: ChatRequest, http_request: Request) -> AsyncIterator[dict]:
     """Stream the Avatar's reply as Server-Sent Events."""
     try:
-        async for event in _chat_events(request):
+        source_ip = getattr(http_request.state, "source_ip", "unknown")
+        async for event in _chat_events(request, source_ip):
             yield event
     except Exception as exc:  # noqa: BLE001 - surface failures to the client
         yield {"type": "error", "message": str(exc)}
@@ -172,9 +207,17 @@ async def chat(request: ChatRequest) -> AsyncIterator[dict]:
 
 
 @admin.post("/login")
-def login(request: LoginRequest, response: Response) -> dict:
+def login(request: LoginRequest, response: Response, http_request: Request) -> dict:
     """Validate the admin password and set a session cookie."""
+    identity = abuse.identify_request(http_request)
+    abuse.enforce_admin_login_request(identity)
     if not verify_password(request.password):
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "Failed admin login attempt from source=%s",
+            identity.source_ip,
+        )
         raise HTTPException(status_code=401, detail="Invalid password")
     set_session_cookie(response)
     return {"ok": True}

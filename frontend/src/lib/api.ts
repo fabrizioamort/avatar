@@ -3,6 +3,7 @@
 import type {
   ChatEvent,
   Config,
+  ConversationSession,
   ConversationSummary,
   ConversationThread,
   Message,
@@ -19,18 +20,26 @@ export function getConfig(): Promise<Config> {
   return fetch("/api/config").then((r) => json<Config>(r));
 }
 
-export function getConversation(id: string, after?: number): Promise<ConversationThread> {
+export function createConversation(): Promise<ConversationSession> {
+  return fetch("/api/conversations", { method: "POST" }).then((r) => json<ConversationSession>(r));
+}
+
+export function getConversation(id: string, token: string, after?: number): Promise<ConversationThread> {
   const qs = after !== undefined ? `?after=${after}` : "";
-  return fetch(`/api/conversations/${id}${qs}`).then((r) => json<ConversationThread>(r));
+  return fetch(`/api/conversations/${id}${qs}`, {
+    headers: { "X-Avatar-Conversation-Token": token },
+  }).then((r) => json<ConversationThread>(r));
 }
 
 export interface ChatBody {
   conversation_id: string;
+  conversation_token: string;
   message: string;
   visitor_name?: string;
 }
 
 export interface StreamHandlers {
+  onPhase?: (phase: string) => void;
   onTool?: (tool: string) => void;
   onToken?: (text: string) => void;
   onInstant?: (faq: number) => void;
@@ -41,6 +50,9 @@ export interface StreamHandlers {
 /** Dispatch a single parsed wire event to the matching handler. */
 function dispatch(event: ChatEvent, h: StreamHandlers): void {
   switch (event.type) {
+    case "phase":
+      h.onPhase?.(event.phase);
+      break;
     case "tool":
       h.onTool?.(event.tool);
       break;

@@ -20,6 +20,11 @@ export interface ConversationThread {
   messages: Message[];
 }
 
+export interface ConversationSession {
+  conversation_id: string;
+  conversation_token: string;
+}
+
 export interface ConversationSummary {
   conversation_id: string;
   conversation_name: string | null;
@@ -37,6 +42,7 @@ export interface Config {
 
 /** SSE wire events streamed from POST /api/chat. */
 export type ChatEvent =
+  | { type: "phase"; phase: "searching" | "thinking" }
   | { type: "tool"; phase: "called"; tool: string }
   | { type: "token"; text: string }
   | { type: "instant"; faq: number }

@@ -62,7 +62,7 @@ def _split_sections(body: str) -> tuple[str | None, list[tuple[str | None, str]]
     for line in body.splitlines():
         h1_match = re.match(r"^#\s+(.+)$", line)
         h2_match = re.match(r"^##\s+(.+)$", line)
-        seen_content = bool(segments) or any(l.strip() for l in lines)
+        seen_content = bool(segments) or any(candidate.strip() for candidate in lines)
         if h1_match and h1 is None and not seen_content:
             h1 = h1_match.group(1).strip()
         elif h2_match:

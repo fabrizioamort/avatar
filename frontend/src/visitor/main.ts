@@ -5,7 +5,7 @@ import "../styles/tokens.css";
 import "../styles/components.css";
 import "../styles/visitor.css";
 
-import { getConfig, getConversation, streamChat } from "../lib/api.ts";
+import { createConversation, getConfig, getConversation, streamChat } from "../lib/api.ts";
 import type { Message } from "../lib/types.ts";
 import { initTheme, wireThemeToggle } from "../lib/theme.ts";
 import { renderMarkdown } from "../lib/markdown.ts";
@@ -34,6 +34,7 @@ const sendBtn = $<HTMLButtonElement>("sendBtn");
 
 let ownerName = "the owner";
 let conversationId = "";
+let conversationToken = "";
 let lastSeenId = 0;
 const renderedIds = new Set<number>();
 let streaming = false;
@@ -41,6 +42,7 @@ let streaming = false;
 // ---- Cookies ----
 
 const CID_COOKIE = "avatar_cid";
+const TOKEN_COOKIE = "avatar_ct";
 const KEEP_COOKIE = "avatar_keep";
 const YEAR = 60 * 60 * 24 * 365;
 
@@ -186,14 +188,26 @@ function insertInstantTag(row: HTMLElement, faq: number): void {
   meta.insertBefore(tag, time);
 }
 
-// ---- Typing indicator ----
+// ---- Thinking indicator (phase-aware) ----
+
+/** Labels for the real backend phases streamed before the first token. */
+const PHASE_LABELS: Record<string, string> = {
+  searching: "Searching knowledge",
+  thinking: "Thinking",
+};
 
 function showTyping(): HTMLElement {
   const node = el("div", { class: "typing", html:
-    `<span class="dots"><span></span><span></span><span></span></span> Avatar is typing` });
+    `<span class="dots"><span></span><span></span><span></span></span> <span class="typing-label">Thinking</span>` });
   convoInner.append(node);
   scrollToLatest();
   return node;
+}
+
+/** Update the indicator label to reflect the current backend phase. */
+function setPhase(node: HTMLElement | null, phase: string): void {
+  const label = node?.querySelector<HTMLElement>(".typing-label");
+  if (label) label.textContent = PHASE_LABELS[phase] ?? "Thinking";
 }
 
 // ---- Send ----
@@ -226,8 +240,16 @@ function send(): void {
   };
 
   void streamChat(
-    { conversation_id: conversationId, message: text, visitor_name: visitorName() },
     {
+      conversation_id: conversationId,
+      conversation_token: conversationToken,
+      message: text,
+      visitor_name: visitorName(),
+    },
+    {
+      onPhase: (phase) => {
+        setPhase(typing, phase);
+      },
       onTool: (tool) => {
         addToolStatus(ensureRow(), tool, true);
         scrollToLatest();
@@ -304,18 +326,23 @@ for (const chip of suggestRow.querySelectorAll<HTMLButtonElement>(".chip")) {
 // ---- Conversation id + keep-chat ----
 
 function persistCid(): void {
-  if (keepChat.checked) setCookie(CID_COOKIE, conversationId, YEAR);
+  if (keepChat.checked) {
+    setCookie(CID_COOKIE, conversationId, YEAR);
+    setCookie(TOKEN_COOKIE, conversationToken, YEAR);
+  }
 }
 
-function newConversation(): void {
-  conversationId = crypto.randomUUID();
+async function newConversation(): Promise<void> {
+  const session = await createConversation();
+  conversationId = session.conversation_id;
+  conversationToken = session.conversation_token;
   lastSeenId = 0;
   renderedIds.clear();
   persistCid();
 }
 
 async function restore(): Promise<void> {
-  const thread = await getConversation(conversationId);
+  const thread = await getConversation(conversationId, conversationToken);
   if (thread.messages.length) {
     hideIntro();
     for (const msg of thread.messages) renderMessage(msg);
@@ -330,13 +357,14 @@ keepChat.addEventListener("change", () => {
   } else {
     deleteCookie(KEEP_COOKIE);
     deleteCookie(CID_COOKIE);
+    deleteCookie(TOKEN_COOKIE);
   }
 });
 
 resetBtn.addEventListener("click", () => {
   convoInner.querySelectorAll(".msg, .typing, .day-sep").forEach((node) => node.remove());
   intro.style.display = "";
-  newConversation();
+  void newConversation();
   composerInput.focus();
 });
 
@@ -362,7 +390,7 @@ function schedulePoll(delay: number): void {
 async function poll(): Promise<void> {
   if (!streaming) {
     try {
-      const thread = await getConversation(conversationId, lastSeenId);
+      const thread = await getConversation(conversationId, conversationToken, lastSeenId);
       if (thread.messages.length && !streaming) {
         hideIntro();
         for (const msg of thread.messages) renderMessage(msg);
@@ -391,11 +419,13 @@ async function boot(): Promise<void> {
   }
 
   const existing = keepChat.checked ? getCookie(CID_COOKIE) : null;
-  if (existing) {
+  const existingToken = keepChat.checked ? getCookie(TOKEN_COOKIE) : null;
+  if (existing && existingToken) {
     conversationId = existing;
+    conversationToken = existingToken;
     persistCid();
   } else {
-    newConversation();
+    await newConversation();
   }
 
   composerInput.focus();
@@ -414,11 +444,12 @@ async function boot(): Promise<void> {
     // config is best-effort; the page still works with default copy.
   }
 
-  if (existing) {
+  if (existing && existingToken) {
     try {
       await restore();
     } catch {
-      // a stale/invalid cid restores as an empty thread; ignore.
+      // A stale/invalid visitor session starts fresh.
+      await newConversation();
     }
   }
 

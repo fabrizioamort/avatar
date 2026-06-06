@@ -18,7 +18,7 @@ How to deploy Avatar to **Google Cloud Run** as a single container, run it in pr
 
 **`min-instances=0` (accept cold starts).** Cloud Run bills idle minimum instances. The goal here is free-tier leverage, so we keep zero idle instances and accept a cold start on the first request after the service scales to zero. A personal twin's traffic is bursty and low-volume, so this is the right default. If you want snappier first responses and can accept the idle cost, set `--min-instances 1` in `scripts/deploy_gcp.*`.
 
-**`max-instances=1` (single instance).** The per-conversation rate limit (20 messages/minute) is held **in memory, per instance**. With one instance the limit behaves exactly as designed. The app is IO-bound (a chat reply is dominated by the OpenRouter LLM, streamed back asynchronously over SSE), so one instance at concurrency 40 comfortably serves a personal site. **If you raise `max-instances`, move the rate limiter to a shared store first** (otherwise the effective limit becomes 20/min per instance).
+**`max-instances=1` (single instance).** The chat, login, and Pushover abuse guards are held **in memory, per instance**. With one instance the per-IP, global, per-conversation, and budget counters behave as designed. The app is IO-bound (a chat reply is dominated by the OpenRouter LLM, streamed back asynchronously over SSE), so one instance at concurrency 40 comfortably serves a personal site. **If you raise `max-instances`, move the limiter to a shared store first** (Firestore counters, Redis/Memorystore, or equivalent).
 
 **Request-based billing (`--cpu-throttling`).** CPU is only allocated while a request is being handled (including startup and shutdown), which is what keeps an idle service free. `512Mi` is enough for Python + the Agents SDK + a handful of live SSE connections; bump only `--memory` to `1Gi` if smoke testing shows memory pressure.
 
@@ -29,14 +29,14 @@ How to deploy Avatar to **Google Cloud Run** as a single container, run it in pr
 - **Secret Manager** gives 6 active secret versions and 10k access operations/month free. Avatar uses exactly five secrets (`OPENROUTER_API_KEY`, `ADMIN_PASSWORD`, `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `SESSION_SECRET`); `MODEL` and `OWNER_NAME` are non-secret env vars. Keep one active version per secret.
 - **Artifact Registry** has a small free storage allowance. `setup_gcp.*` applies a cleanup policy (keep the 2 most recent versions, delete versions older than 30 days). See the note below about which repo source deploys actually use.
 - **Vertex AI embeddings** (knowledge retrieval) are **billed usage, not free**. At a personal twin's scale the cost is tiny: ingestion embeds a handful of chunks once per knowledge edit, and each non-FAQ chat turn embeds one short query. Even so, treat it as real spend and rely on a budget alert rather than assuming free-tier coverage.
-- **Budget alerts** notify but do not cap spend. Add a low budget alert in the Cloud Console as an early warning (it also covers the embedding spend above).
+- **Budget alerts** notify but do not cap spend. Add a low budget alert in the Cloud Console as an early warning (it also covers the embedding spend above). Also set an OpenRouter spend cap or prepaid credit limit; the app-side limiter is not a provider-side billing cap.
 
 ## 1. Prerequisites
 
 - `gcloud` installed and logged in (`gcloud auth login`), with a project set (`gcloud config set project YOUR_PROJECT_ID`).
 - Application Default Credentials authorized: `gcloud auth application-default login`.
 - The root `.env` fully populated (see [README setup](README.md#setup-instructions)), including `SESSION_SECRET`. `.env` is **never** uploaded to Cloud Build (`.gcloudignore` excludes it) and never baked into the image; secrets come from Secret Manager.
-- `scripts/setup_gcp.*` run once (enables APIs, creates Firestore, the `avatar-runtime` service account, and the secrets). No local Docker is needed — Cloud Build builds remotely.
+- `scripts/setup_gcp.*` run once (enables APIs, creates Firestore, the `avatar-runtime` service account, grants Firestore and Vertex AI access, and creates the secrets). No local Docker is needed — Cloud Build builds remotely.
 - The **knowledge vector index** created once and the knowledge **ingested** at least once, so the Avatar has something to retrieve. Both are local steps (run against the same Firestore project via ADC); see [Knowledge retrieval (RAG)](README.md#knowledge-retrieval-rag). The `knowledge/` markdown is bundled in the image, but the embeddings live in Firestore, so re-run the ingest after any knowledge edit — it is not part of the container build. There is no admin ingest endpoint or scheduler in v1: ingestion is a deliberate, manual CLI step (a scheduler would only re-ingest the same bundled files).
 
 ## 2. Deploy
@@ -63,7 +63,9 @@ Set as **non-secret Cloud Run env vars** (passed by `deploy_gcp.*`):
 |---|---|---|
 | `MODEL` | from `.env` | the OpenRouter model id (e.g. `openai/gpt-5.4-mini` for production) |
 | `OWNER_NAME` | from `.env` | the name shown in the UI |
+| `ENVIRONMENT` | `production` | enables fail-closed production config validation |
 | `COOKIE_SECURE` | `1` | production is HTTPS, so the admin session cookie must be `Secure` |
+| `TRUST_PROXY_HEADERS` | `1` | trust Cloud Run's proxy headers for per-client IP throttling |
 | `GOOGLE_CLOUD_PROJECT` | your project id | Firestore project |
 | `FIRESTORE_DATABASE` | `(default)` | the only database with free quota |
 
@@ -72,9 +74,11 @@ Set as **Secret Manager secrets** (created by `setup_gcp.*` from `.env`, mounted
 `OPENROUTER_API_KEY`, `ADMIN_PASSWORD`, `PUSHOVER_USER`, `PUSHOVER_TOKEN`, `SESSION_SECRET`.
 
 Notes:
-- **`SESSION_SECRET`** signs the admin session cookie. If it is absent from `.env`, `setup_gcp.*` generates a strong random value and stores it. Setting it explicitly means rotating `ADMIN_PASSWORD` later won't invalidate live admin sessions.
+- **`ADMIN_PASSWORD`** must be at least 16 characters. If it is absent from `.env`, `setup_gcp.*` generates and stores a random value; retrieve it from Secret Manager before logging out.
+- **`SESSION_SECRET`** signs the admin session cookie and visitor conversation tokens. It must be at least 32 random characters. If it is absent from `.env`, `setup_gcp.*` generates a strong random value and stores it. Setting it explicitly means rotating `ADMIN_PASSWORD` later won't invalidate live admin sessions.
 - **`MODEL`** is whatever is in `.env`. For production set `MODEL=openai/gpt-5.4-mini` before deploying (`openai/gpt-5.4-nano` is the cheaper dev/test model and the code default). Change it later by editing `.env` and redeploying, or `gcloud run services update avatar --region <region> --update-env-vars MODEL=...`.
 - To rotate a secret: `printf '%s' NEW_VALUE | gcloud secrets versions add NAME --data-file=-`, then redeploy (or `gcloud run services update` to pick up `:latest`).
+- Runtime IAM required by the app: setup creates narrow custom project roles for Firestore document access and Vertex prediction, then grants `roles/secretmanager.secretAccessor` only on each configured secret. Run Avatar in a dedicated or otherwise low-blast-radius GCP project, and confirm the `avatar-runtime` service account has no owner/editor/admin roles.
 
 ## 4. Testing (post-deploy smoke)
 
@@ -92,7 +96,7 @@ Run against the printed `https://<service>-<hash>.<region>.run.app` URL. Use `MO
 - [ ] Contact-capture flow ("I'd like to get in touch", give an email) fires a **Pushover** notification and sets `needs_attention`.
 - [ ] In DevTools, the admin session cookie has the **`Secure`** flag (confirms `COOKIE_SECURE=1`).
 - [ ] Cloud Run logs show no Firestore auth errors, memory errors, or missing env vars: `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="avatar" AND severity>=WARNING' --freshness=15m`.
-- [ ] Abuse guards work: a >20,000-character message is truncated (note appended), and a 21st message within a minute on one conversation returns HTTP 429 (no model call).
+- [ ] Abuse guards work: a >4,000-character message is truncated (note appended), rotating conversation IDs still hits the per-IP/global limit, and excessive requests return HTTP 429 before Firestore writes, RAG, LLM, or Pushover work.
 - [ ] Clean up: delete the test conversation threads from Firestore and any screenshots.
 
 ## 5. Success criteria
@@ -104,14 +108,17 @@ Deployment is successful when:
 - Secrets are configured via Secret Manager (never baked into the image); the admin cookie is `Secure`.
 - Logs are clean.
 
-## Abuse guards (built in)
+## Abuse Guards And Spend Controls
 
-Two cheap protections for your OpenRouter key are enforced in the backend, with no configuration:
+The backend enforces these controls before paid or limited work:
 
-- Visitor messages longer than 20,000 characters are truncated (with a note appended) before being stored or sent to the model.
-- Each `conversation_id` is limited to 20 messages/minute; excess requests get HTTP 429 *before* any LLM call, and the visitor UI shows a friendly slow-down message.
+- Server-issued signed visitor sessions are required for public conversation reads and chat posts.
+- Chat is limited by source IP, globally, by conversation id, and by an hourly service budget.
+- Admin login attempts are limited by source IP.
+- Pushover notifications are capped by conversation, source IP, and daily global quota; Pushover HTTP calls use timeouts and message length caps.
+- Visitor message length, conversation length, and model transcript size are bounded.
 
-The rate limit is in-memory per instance. With `max-instances=1` (the default here) it is exactly 20/min per conversation. Your OpenRouter account limits remain the overall backstop.
+The limiter is in-memory per instance. With `max-instances=1` (the default here) the counters are service-wide for the deployment. If you scale beyond one instance, move these counters to a shared store first. Keep provider-side backstops in place: OpenRouter spend cap or credit limit, GCP budget alerts/quotas, Pushover quota monitoring, and Cloud Logging alerts for elevated 429s, 5xxs, high request counts, and unusual Vertex/OpenRouter spend.
 
 ## 6. Custom domain (optional, deferred)
 

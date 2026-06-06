@@ -17,12 +17,17 @@ def _parse_sse(text: str) -> list[dict]:
     return events
 
 
-def test_instant_answer_no_model(client, conversation_id):
+def test_instant_answer_no_model(client, conversation_id, visitor_token):
     """A bare Qn message returns an instant event and the answer with no model call."""
     with client.stream(
         "POST",
         "/api/chat",
-        json={"conversation_id": conversation_id, "message": "Q2", "visitor_name": "EF"},
+        json={
+            "conversation_id": conversation_id,
+            "conversation_token": visitor_token,
+            "message": "Q2",
+            "visitor_name": "EF",
+        },
     ) as response:
         assert response.status_code == 200
         body = "".join(response.iter_text())
@@ -38,13 +43,14 @@ def test_instant_answer_no_model(client, conversation_id):
 
 
 @pytest.mark.llm
-def test_chat_streams_tokens_and_persists(client, conversation_id):
+def test_chat_streams_tokens_and_persists(client, conversation_id, visitor_token):
     """A plain message streams token events, a done event, and persists the avatar row."""
     with client.stream(
         "POST",
         "/api/chat",
         json={
             "conversation_id": conversation_id,
+            "conversation_token": visitor_token,
             "message": "In one short sentence, who is this digital twin?",
             "visitor_name": "GH",
         },
@@ -62,13 +68,14 @@ def test_chat_streams_tokens_and_persists(client, conversation_id):
 
 
 @pytest.mark.llm
-def test_chat_contact_triggers_push(client, conversation_id):
+def test_chat_contact_triggers_push(client, conversation_id, visitor_token):
     """Asking to get in touch with an email should trigger push_tool and needs_attention."""
     with client.stream(
         "POST",
         "/api/chat",
         json={
             "conversation_id": conversation_id,
+            "conversation_token": visitor_token,
             "message": "Please ask the owner to contact me at test@example.com about consulting.",
             "visitor_name": "IJ",
         },

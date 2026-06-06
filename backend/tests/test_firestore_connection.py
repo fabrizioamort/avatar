@@ -8,8 +8,6 @@ the rest of the app expects.
 import os
 import uuid
 
-import pytest
-
 from app import db
 from app.config import get_settings
 

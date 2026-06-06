@@ -25,6 +25,7 @@ class ChatRequest(BaseModel):
     """Visitor chat submission."""
 
     conversation_id: str
+    conversation_token: str
     message: str
     visitor_name: str | None = None
 
@@ -47,6 +48,13 @@ class ConversationThread(BaseModel):
     conversation_id: str
     conversation_name: str | None = None
     messages: list[Message]
+
+
+class ConversationSession(BaseModel):
+    """Server-issued visitor conversation credentials."""
+
+    conversation_id: str
+    conversation_token: str
 
 
 class ConversationSummary(BaseModel):

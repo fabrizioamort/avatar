@@ -1,8 +1,11 @@
 """Tests for admin authentication and route guarding."""
 
 import os
+from dataclasses import replace
 
+from app import abuse
 from app.auth import COOKIE_NAME
+from app.config import get_settings
 
 GUARDED = "/admin/conversations"
 
@@ -18,6 +21,18 @@ def test_me_unauthenticated(client):
 def test_wrong_password_rejected(client):
     response = client.post("/admin/login", json={"password": "definitely-wrong"})
     assert response.status_code == 401
+
+
+def test_repeated_wrong_passwords_are_rate_limited(client, monkeypatch):
+    settings = replace(get_settings(), admin_login_rate_per_ip="2/minute")
+    monkeypatch.setattr(abuse, "get_settings", lambda: settings)
+
+    for _ in range(2):
+        response = client.post("/admin/login", json={"password": "definitely-wrong"})
+        assert response.status_code == 401
+
+    blocked = client.post("/admin/login", json={"password": "definitely-wrong"})
+    assert blocked.status_code == 429
 
 
 def test_correct_password_grants_access(client):
