@@ -79,7 +79,7 @@ def _require_secret(name: str, *, min_length: int) -> str:
 def get_settings() -> Settings:
     """Return cached settings read from the environment."""
     environment = _env("ENVIRONMENT", "production").lower()
-    admin_password = _require_secret("ADMIN_PASSWORD", min_length=16)
+    admin_password = _require_secret("ADMIN_PASSWORD", min_length=8)
     session_secret = _require_secret("SESSION_SECRET", min_length=32)
     if environment == "production" and not _env("SESSION_SECRET").strip():
         raise ValueError("SESSION_SECRET must be set in production.")
