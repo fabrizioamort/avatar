@@ -23,6 +23,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Install backend dependencies first (cached unless lockfile changes).
+# Pin uv to the image's system Python so the venv references /usr/local/bin/python
+# (a stable path that exists at runtime) instead of a uv-managed interpreter.
+ENV UV_PYTHON_PREFERENCE=only-system
 COPY backend/pyproject.toml backend/uv.lock ./backend/
 RUN uv sync --project backend --frozen --no-dev
 
@@ -40,5 +43,7 @@ ENV FRONTEND_DIST=/app/frontend/dist \
 EXPOSE 8080
 
 # Shell form so Cloud Run's injected $PORT is expanded (defaults to 8080 locally).
-# app.main:app with the backend dir as the import root.
-CMD ["sh", "-c", "uv run --project backend uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port ${PORT:-8080}"]
+# Start uvicorn directly from the baked venv: invoking uv at runtime can decide to
+# rebuild the environment on cold start (re-downloading Python and all packages),
+# which added ~20s to every Cloud Run cold start.
+CMD ["sh", "-c", "backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port ${PORT:-8080}"]

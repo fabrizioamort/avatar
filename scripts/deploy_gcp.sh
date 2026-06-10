@@ -37,7 +37,8 @@ OWNER_NAME="$(env_value OWNER_NAME)"; [ -z "$OWNER_NAME" ] && OWNER_NAME="Ed Don
 echo "Deploying '$SERVICE_NAME' to Cloud Run ($REGION, project $PROJECT_ID)..."
 
 # --source builds with Cloud Build and pushes to the cloud-run-source-deploy
-# Artifact Registry repo. min-instances=0 (cold starts ok, no idle billing).
+# Artifact Registry repo. min-instances=0 (no idle billing; cold starts are short
+# now that the image starts uvicorn directly, and --cpu-boost speeds them up).
 # max-instances=1 keeps the in-memory rate limiter correct. --cpu-throttling
 # selects request-based billing (CPU only allocated while serving).
 gcloud run deploy "$SERVICE_NAME" \
@@ -48,6 +49,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 1 \
+  --cpu-boost \
   --concurrency 40 \
   --memory 512Mi \
   --cpu 1 \

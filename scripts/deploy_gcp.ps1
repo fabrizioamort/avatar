@@ -36,7 +36,8 @@ if (-not $OwnerName) { $OwnerName = "Ed Donner" }
 Write-Host "Deploying '$ServiceName' to Cloud Run ($Region, project $ProjectId)..."
 
 # --source builds with Cloud Build and pushes to the cloud-run-source-deploy
-# Artifact Registry repo. min-instances=0 (cold starts ok, no idle billing).
+# Artifact Registry repo. min-instances=0 (no idle billing; cold starts are short
+# now that the image starts uvicorn directly, and --cpu-boost speeds them up).
 # max-instances=1 keeps the in-memory rate limiter correct. --cpu-throttling
 # selects request-based billing (CPU only allocated while serving).
 $envVars = "^@^MODEL=$Model@OWNER_NAME=$OwnerName@ENVIRONMENT=production@COOKIE_SECURE=1@TRUST_PROXY_HEADERS=1@GOOGLE_CLOUD_PROJECT=$ProjectId@FIRESTORE_DATABASE=(default)"
@@ -50,6 +51,7 @@ gcloud run deploy $ServiceName `
     --allow-unauthenticated `
     --min-instances 0 `
     --max-instances 1 `
+    --cpu-boost `
     --concurrency 40 `
     --memory 512Mi `
     --cpu 1 `
