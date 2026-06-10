@@ -1,5 +1,6 @@
 """FastAPI app: public + admin APIs, SSE chat, and static frontend serving."""
 
+import asyncio
 import os
 import uuid
 from collections.abc import AsyncIterator
@@ -43,9 +44,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Avatar", lifespan=lifespan)
 
-# Dev only: let the static site's local dev origin call /api during development.
+# Let the static site call /api cross-origin: localhost origins in dev, and the
+# production site origins in prod (Firebase Hosting rewrites buffer responses,
+# which breaks SSE streaming, so the browser talks to Cloud Run directly).
 # Public visitor calls are not credentialed, so a plain (no-credentials) CORS
-# allowance is enough. Set DEV_CORS_ORIGINS only in the local .env, never in prod.
+# allowance is enough.
 _dev_origins = [o for o in os.getenv("DEV_CORS_ORIGINS", "").split(",") if o]
 if _dev_origins:
     app.add_middleware(
@@ -162,7 +165,9 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
     retrieved_text = ""
     if settings.rag_enabled:
         yield {"type": "phase", "phase": "searching"}
-        retrieved = rag_service.retrieve_knowledge(message)
+        # Off the event loop: a blocking retrieval here would also keep the
+        # just-yielded "searching" event from being flushed to the client.
+        retrieved = await asyncio.to_thread(rag_service.retrieve_knowledge, message)
         retrieved_text = rag_service.format_retrieved_context(retrieved)
     if not retrieved_text:
         # No confident chunk (or RAG disabled): fall back to the static profile.

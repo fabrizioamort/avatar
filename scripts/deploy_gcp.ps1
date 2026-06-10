@@ -40,7 +40,10 @@ Write-Host "Deploying '$ServiceName' to Cloud Run ($Region, project $ProjectId).
 # now that the image starts uvicorn directly, and --cpu-boost speeds them up).
 # max-instances=1 keeps the in-memory rate limiter correct. --cpu-throttling
 # selects request-based billing (CPU only allocated while serving).
-$envVars = "^@^MODEL=$Model@OWNER_NAME=$OwnerName@ENVIRONMENT=production@COOKIE_SECURE=1@TRUST_PROXY_HEADERS=1@GOOGLE_CLOUD_PROJECT=$ProjectId@FIRESTORE_DATABASE=(default)"
+# The static site (Firebase Hosting) calls this service cross-origin, because
+# Hosting rewrites buffer responses and break SSE streaming.
+$CorsOrigins = "https://fabrizioamort.com,https://www.fabrizioamort.com,https://ace-server-480513-d3.web.app,https://ace-server-480513-d3.firebaseapp.com"
+$envVars = "^@^MODEL=$Model@OWNER_NAME=$OwnerName@ENVIRONMENT=production@COOKIE_SECURE=1@TRUST_PROXY_HEADERS=1@GOOGLE_CLOUD_PROJECT=$ProjectId@FIRESTORE_DATABASE=(default)@DEV_CORS_ORIGINS=$CorsOrigins"
 $secrets = "OPENROUTER_API_KEY=OPENROUTER_API_KEY:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest,PUSHOVER_USER=PUSHOVER_USER:latest,PUSHOVER_TOKEN=PUSHOVER_TOKEN:latest,SESSION_SECRET=SESSION_SECRET:latest"
 
 gcloud run deploy $ServiceName `
