@@ -434,11 +434,11 @@ async function boot(): Promise<void> {
     const config = await getConfig();
     ownerName = config.owner_name;
     brandSub.textContent = `${ownerName} · digital twin`;
-    document.title = `Avatar · ${ownerName}`;
+    document.title = `${ownerName} · Digital Twin`;
     introHeading.innerHTML =
       `I'm ${escapeHtml(ownerName)}'s <em>digital twin</em>.<br>Ask me anything &mdash; the real ${escapeHtml(ownerName)} might just chime in.`;
     introBody.textContent =
-      `I know ${ownerName}'s background, courses, and curriculum. I can also put you in touch directly.`;
+      `I know ${ownerName}'s background, projects, and curriculum. I can also put you in touch directly.`;
     applyPlaceholder();
   } catch {
     // config is best-effort; the page still works with default copy.
