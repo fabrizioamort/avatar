@@ -1,5 +1,8 @@
 # Avatar
 
+> Based on [Ed Donner's course project](https://github.com/ed-donner/avatar); this fork adds
+> the full GCP migration, Firestore vector RAG, and security hardening.
+
 A production-ready digital twin web app. Visitors chat with an LLM-backed avatar of the site
 owner; the owner can join any conversation live from an admin panel — making every thread a
 three-way exchange between **visitor**, **avatar**, and **human**.
