@@ -8,6 +8,7 @@ tags:
   - telco
   - expert-systems
   - performance-testing
+  - drupal
 priority: 0
 updated: 2026-06-19
 ---
@@ -36,7 +37,9 @@ That project is where I learned to plan and architect for performance as a first
 
 ### Software Engineer (2007 to 2024)
 
-For seventeen years I designed and implemented a unified web platform based on Drupal for the TIM Group, and contributed to the design, architecture, and in some cases development of around 30 enterprise websites. I held end-to-end responsibility: user interaction, requirement collection, architectural design, development support, and operations. The recurring theme was scalability, reliability, and time-to-market for large-scale digital platforms.
+I took on every TIM Group website except the commercial ones. The very first was an internal corporate blog, originally built on a custom platform from a French vendor; as more initiatives wanted their own site, running a different platform per initiative stopped making sense for development time and cost, so I standardized on Drupal for its flexibility across very different site types and its zero licensing cost as open source software. To make that scale, I built Multiblog, a shared Drupal base that could host many independent sites without standing up new infrastructure for each one: the base was always there, and a new site was just built on top of it, which cut delivery time dramatically. I worked daily on this LAMP stack (Linux, Apache, MySQL, PHP) and Drupal.
+
+For seventeen years I designed and implemented this unified Drupal platform for the TIM Group, and contributed to the design, architecture, and in some cases development of around 30 enterprise websites, several of which tracked the rise and fall of initiatives inside Telecom Italia while a handful built for subsidiary companies in the group survived for years. I held end-to-end responsibility: user interaction, requirement collection, architectural design, development support, and operations, including deployment and security, up to handling real attacks against these sites. The recurring theme was scalability, reliability, and time-to-market for large-scale digital platforms.
 
 ### GenAI Architect (June 2024 to present)
 
