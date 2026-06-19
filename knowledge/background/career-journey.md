@@ -6,8 +6,9 @@ tags:
   - career
   - tim
   - telco
+  - expert-systems
 priority: 0
-updated: 2026-06-02
+updated: 2026-06-19
 ---
 
 # Career Journey
@@ -16,9 +17,11 @@ updated: 2026-06-02
 
 My career spans more than 30 years, all of it in Turin, Piedmont. The through-line is a steady climb up the abstraction stack: from low-level systems and switch management, to large-scale web platforms, to cloud-native, and now to AI architectures. Each stage taught me something the next one needed.
 
-## Telesoft (1991 to 2003) — Software Developer
+## Telesoft (May 1991 to 2003) — Software Developer
 
-I started building software solutions for radiomobile coverage mapping and telephone switch management systems. This was twelve years of low-level, performance-sensitive work close to telecommunications infrastructure. It gave me an early, deep respect for systems that have to be correct and reliable, not just clever.
+I started at Telesoft in May 1991. Telesoft was the company within the SIP group handling information technology; SIP was the predecessor of Telecom Italia. I started building software solutions for radiomobile coverage mapping and telephone switch management systems. This was twelve years of low-level, performance-sensitive work close to telecommunications infrastructure. It gave me an early, deep respect for systems that have to be correct and reliable, not just clever.
+
+One of the projects I worked on there, NetKit, was itself an AI system: an expert system for managing a network of telephone exchanges. Alarms came in from voice switches made by different vendors, each with its own protocol and format. NetKit collected all of that alarm data, normalized it into a consistent, coherent form, and used an expert system to make the resulting network manageable. It's a direct line from my university thesis on optimizing an expert system with genetic algorithms straight into my first job applying expert systems to a real production problem.
 
 ## Shared Service Center (2003 to 2007) — Software Engineer
 
