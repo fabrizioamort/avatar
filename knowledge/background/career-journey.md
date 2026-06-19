@@ -7,6 +7,7 @@ tags:
   - tim
   - telco
   - expert-systems
+  - performance-testing
 priority: 0
 updated: 2026-06-19
 ---
@@ -25,7 +26,11 @@ One of the projects I worked on there, NetKit, was itself an AI system: an exper
 
 ## Shared Service Center (2003 to 2007) — Software Engineer
 
-I moved to developing the corporate intranet based on SAP Portal, doing Java development with a strong focus on performance and scalability. The platform served roughly 100,000 employees, so this is where I learned what scale really means and what it does to your design choices.
+I moved to developing the corporate intranet based on SAP Portal, doing Java development with a strong focus on performance and scalability. The platform served roughly 100,000 employees across two different companies, Telecom Italia/SIP and Pirelli, sharing the same infrastructure; at the time, no SAP Portal installation had ever served that many employees. This is where I learned what scale really means and what it does to your design choices.
+
+The original architecture had around ten front-end servers and roughly twenty back-end servers, designed so any machine could serve either company's employees. That shared-everything assumption was the problem: because TIM and Pirelli employees had different requirements, we ended up with separate Java classes for each, and every machine still had to load both sets. The extra memory footprint on every node sharply capped how many concurrent users each machine could actually handle. My proposal was to partition the fleet instead: dedicate one set of machines to TIM, serving only TIM employees and loading only the TIM classes, and a separate set to Pirelli, loading only Pirelli classes, while keeping a single shared codebase at development time. That cut the memory needed per machine substantially and got us to much higher performance.
+
+That project is where I learned to plan and architect for performance as a first-class concern, and where I built real depth in performance testing using LoadRunner, the dominant load-testing platform of that era, both designing test plans and running the test campaigns myself.
 
 ## TIM / Telecom Italia (2007 to present) — 19 years
 
