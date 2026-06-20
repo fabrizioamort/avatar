@@ -99,5 +99,9 @@ answering, rather than estimate from memory. Revisit once he has them — no KB 
 
 ## Open clarifications carried over
 
-1. The second business function in Q3, beyond Human Resources (garbled in transcript).
+1. ~~The second business function in Q3, beyond Human Resources (garbled in transcript).~~
+   **Resolved 2026-06-20:** not one function, basically all of them — customer care,
+   marketing/communications, institutional affairs, network operations, and HR, "practically
+   everyone" across TIM. `knowledge/background/career-journey.md` updated in both the Drupal-era
+   and GenAI Architect sections.
 2. Citizenship / work-authorization status (Q5, not yet addressed).
