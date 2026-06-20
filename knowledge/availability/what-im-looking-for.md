@@ -43,7 +43,7 @@ I do not hold out for a single fixed number. What works for me scales with the s
 
 ## Practicalities
 
-Turin is my home base and I want it to stay that way. I prefer remote-first work — my team has worked remotely for years, so it is second nature to me. I am comfortable traveling to Milan up to a couple of times a week, and open to occasional longer assignments away (a few weeks, up to a few months at most) for the right engagement, as long as Turin stays my primary base. I work and interview comfortably in both Italian and English.
+Turin is my home base and I want it to stay that way. I prefer remote-first work — my team has worked remotely for years, so it is second nature to me. I am comfortable traveling to Milan up to a couple of times a week, and open to occasional longer assignments away (a few weeks, up to a few months at most) for the right engagement, as long as Turin stays my primary base. My English is solid enough for interviews, public speaking, and client-facing discussions in English, which I have done often with clients. I work and interview comfortably in both Italian and English.
 
 ## What I Optimize For
 

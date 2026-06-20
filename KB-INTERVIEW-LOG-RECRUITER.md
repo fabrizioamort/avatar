@@ -68,7 +68,34 @@ answering, rather than estimate from memory. Revisit once he has them — no KB 
 - **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (Practicalities section
   rewritten).
 
-## Still pending (Q4 numbers, Q6–Q8 above, citizenship follow-up from Q5)
+### Q6 — External credibility signals (answered 2026-06-20)
+
+- **Answer:** No patents. No public talks, publications, or other credibility signals beyond
+  what's already documented — the only public footprint is the GitHub projects already covered
+  in `knowledge/projects/`. No KB change needed; this confirms the existing project write-ups
+  are the complete public-facing picture.
+- One clause in the transcript was unintelligible even to Fabrizio (he flagged it himself,
+  "che non ho capito") — dropped, no content lost since the rest of the answer was clear.
+
+### Q7 — Languages, precisely (answered 2026-06-20)
+
+- **Public, now in the KB:** English is solid enough for interviews, public speaking, and
+  client-facing discussions — something done often with clients (not just "comfortable," a
+  stronger claim than before). No additional working languages beyond Italian/English mentioned.
+- **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (Practicalities) and
+  `knowledge/faq.jsonl` (FAQ 9 answer, kept in sync since it's the direct `Q9` shortcut).
+
+### Q8 — Engagement type preference (answered 2026-06-20)
+
+- **Answer:** Confirms permanent, fixed-term, and freelance (partita IVA) are all equally fine,
+  no ranking. Already fully captured by the "Engagement Type" section added for Q1 — no KB
+  change needed.
+
+## Still pending
+
+- Q4 (hard numbers on FAT2 / Shared Service Center) — deferred, Fabrizio is pulling figures from
+  documentation.
+- Citizenship / work-authorization status (from Q5) — not yet addressed.
 
 ## Open clarifications carried over
 
