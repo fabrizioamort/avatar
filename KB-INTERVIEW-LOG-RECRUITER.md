@@ -53,8 +53,24 @@ outside `knowledge/` so it is never embedded or shown to the Avatar.
 - **File(s) updated:** `knowledge/background/career-journey.md` (one sentence added to the
   Software Engineer/Drupal section and one to the GenAI Architect section).
 
-## Still pending (Q4–Q8 above, awaiting answers)
+### Q4 — Hard numbers (deferred 2026-06-20)
+
+Fabrizio wants to pull precise figures from FAT2/Shared Service Center documentation before
+answering, rather than estimate from memory. Revisit once he has them — no KB change yet.
+
+### Q5 — Work authorization & mobility (partially answered 2026-06-20)
+
+- **Public, now in the KB:** Turin stays the primary/home base. Comfortable with Milan up to
+  twice a week, and open to occasional longer away-assignments (a few weeks, max a few months)
+  for the right role. Long practiced at full-remote work (team has worked remotely for years).
+- **Still open:** citizenship / work-authorization status was not addressed in this answer —
+  ask directly if a recruiter-facing statement on this is ever needed.
+- **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (Practicalities section
+  rewritten).
+
+## Still pending (Q4 numbers, Q6–Q8 above, citizenship follow-up from Q5)
 
 ## Open clarifications carried over
 
 1. The second business function in Q3, beyond Human Resources (garbled in transcript).
+2. Citizenship / work-authorization status (Q5, not yet addressed).
