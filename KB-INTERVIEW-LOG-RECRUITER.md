@@ -41,4 +41,20 @@ outside `knowledge/` so it is never embedded or shown to the Avatar.
 - **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (new "Compensation"
   section).
 
-## Still pending (Q3–Q8 above, awaiting answers)
+### Q3 — Leadership and scope (answered 2026-06-20)
+
+- **Public, now in the KB:** Both during the Drupal era and as GenAI Architect, leadership has
+  been small-scale and project-sized: teams of around two people at a time, reflecting the small
+  scope of each project/PoC. Regularly interfaces with other business functions beyond
+  engineering, including Human Resources.
+- **Open clarification (not guessed):** the transcript names a second business function after
+  HR ("...che tenga eccetera") that didn't transcribe cleanly. Left out rather than guessed —
+  ask Fabrizio which function(s) beyond HR he meant.
+- **File(s) updated:** `knowledge/background/career-journey.md` (one sentence added to the
+  Software Engineer/Drupal section and one to the GenAI Architect section).
+
+## Still pending (Q4–Q8 above, awaiting answers)
+
+## Open clarifications carried over
+
+1. The second business function in Q3, beyond Human Resources (garbled in transcript).

@@ -11,7 +11,7 @@ tags:
   - drupal
   - security
 priority: 0
-updated: 2026-06-19
+updated: 2026-06-20
 ---
 
 # Career Journey
@@ -42,11 +42,15 @@ I took on every TIM Group website except the commercial ones. The very first was
 
 For seventeen years I designed and implemented this unified Drupal platform for the TIM Group, and contributed to the design, architecture, and in some cases development of around 30 enterprise websites, several of which tracked the rise and fall of initiatives inside Telecom Italia while a handful built for subsidiary companies in the group survived for years. I held end-to-end responsibility: user interaction, requirement collection, architectural design, development support, and operations, including deployment and security, up to handling real attacks against these sites. The recurring theme was scalability, reliability, and time-to-market for large-scale digital platforms.
 
+On the people side, each project was small in scope, so the teams I led were small too, typically around two people at a time. I regularly interfaced with other business functions beyond engineering, including Human Resources.
+
 Attack attempts against these sites were essentially a daily occurrence, visible in the logs, and none of them ever succeeded. Most were automated scans for known vulnerabilities in major CMSs, especially WordPress but also Drupal itself. What made the difference was treating patching as time-critical rather than just policy-compliant: beyond following internal security policy, I watched Drupal's own security advisories closely, and when a particularly serious vulnerability was disclosed, I made sure every site was patched before attackers could act on it. My rule of thumb for a publicly disclosed, serious flaw is to reason in hours, not days or weeks: once a vulnerability is public, automated exploitation can start within hours, so it has to be treated like a zero-day, with remediation essentially immediate rather than queued behind a normal change cycle. That discipline is why no attack against any site I ran was ever successful, including the cases our SOC flagged as potentially dangerous; on investigation those were always caught in time.
 
 ### GenAI Architect (June 2024 to present)
 
 This is my current role. I do the architectural design of Agentic AI solutions for enterprise use cases, and I design reference architectures, patterns, and guidelines for GenAI applications. I develop and supervise multiple PoCs and pilot projects, some of which evolve into production, and I collaborate across architecture, development, and operations teams. My most complete example of this work is FAT2, an AI-assisted billing document verification system.
+
+As in my Drupal years, the teams I lead here are small, typically around two people, sized to each PoC or pilot, and I continue to interface with other business functions beyond engineering, including Human Resources.
 
 ## What The Arc Gives Me
 
