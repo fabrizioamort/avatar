@@ -30,4 +30,15 @@ outside `knowledge/` so it is never embedded or shown to the Avatar.
 - **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (new "Current Situation"
   and "Engagement Type" sections, refreshed Key Takeaway).
 
-## Still pending (Q2–Q8 above, awaiting answers)
+### Q2 — Compensation stance (answered 2026-06-20)
+
+- **Public, now in the KB:** No fixed minimum compensation target. Expectations scale with the
+  commitment level — a full-time role should come with a fair, adequate package; for a
+  part-time or lighter-scope engagement he's comfortable accepting less. Flexible on salary/rate
+  structure, no particular restrictions.
+- **Private, intentionally NOT recorded:** same underlying personal/financial reason as Q1
+  (explicitly reiterated as off-the-record by the owner). Do not reconstruct it.
+- **File(s) updated:** `knowledge/availability/what-im-looking-for.md` (new "Compensation"
+  section).
+
+## Still pending (Q3–Q8 above, awaiting answers)

@@ -37,6 +37,10 @@ The problems I am drawn to are enterprise GenAI and agentic systems: making AI g
 
 I am open to more than permanent employment. A fixed-term contract suits me well, and so does freelance or independent work under my own VAT registration (partita IVA). I would rather find the right problem and the right team than insist on one specific contract structure.
 
+## Compensation
+
+I do not hold out for a single fixed number. What works for me scales with the scope of the commitment: a full-time role should come with a fair, adequate package, while for a part-time or lighter-scope engagement I am comfortable accepting less. I am flexible on salary or rate structure, without particular restrictions.
+
 ## Practicalities
 
 I am based in Turin and prefer remote-first work, and I am open to roles that involve a day or two a week in Milan. I work and interview comfortably in both Italian and English.
