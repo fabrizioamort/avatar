@@ -7,12 +7,14 @@ tags:
   - collaboration
   - roles
 priority: 1
-updated: 2026-06-02
+updated: 2026-06-20
 ---
 
 # What I'm Looking For
 
-> Owner note: this document is intentionally conservative about personal job-search details. See the generation report before publishing, and decide how open you want the Avatar to be about your current situation.
+## Current Situation
+
+I am currently a permanent employee at TIM (Telecom Italia), and I am openly exploring my next role alongside that. I have no problem being upfront about being currently employed while I look.
 
 ## How To Reach Me
 
@@ -31,9 +33,17 @@ The problems I am drawn to are enterprise GenAI and agentic systems: making AI g
 - An independent or fractional architect arrangement with one or two clients.
 - A lead AI role at a vertical AI company, for example in document AI, legal-tech, fintech, or regtech, where my enterprise document-verification experience is a strong fit.
 
+## Engagement Type
+
+I am open to more than permanent employment. A fixed-term contract suits me well, and so does freelance or independent work under my own VAT registration (partita IVA). I would rather find the right problem and the right team than insist on one specific contract structure.
+
+## Compensation
+
+I do not hold out for a single fixed number. What works for me scales with the scope of the commitment: a full-time role should come with a fair, adequate package, while for a part-time or lighter-scope engagement I am comfortable accepting less. I am flexible on salary or rate structure, without particular restrictions.
+
 ## Practicalities
 
-I am based in Turin and prefer remote-first work, and I am open to roles that involve a day or two a week in Milan. I work and interview comfortably in both Italian and English.
+Turin is my home base and I want it to stay that way. I prefer remote-first work — my team has worked remotely for years, so it is second nature to me. I am comfortable traveling to Milan up to a couple of times a week, and open to occasional longer assignments away (a few weeks, up to a few months at most) for the right engagement, as long as Turin stays my primary base. My English is solid enough for interviews, public speaking, and client-facing discussions in English, which I have done often with clients. I work and interview comfortably in both Italian and English.
 
 ## What I Optimize For
 
@@ -41,4 +51,4 @@ Long-term impact, learning, and reputation. I would rather find the right proble
 
 ## Key Takeaway
 
-I am open to the right enterprise or AI-native GenAI architecture or hands-on engineering role, remote-first from Turin with some Milan travel. To start a conversation, leave your email with the Avatar or reach me on LinkedIn.
+Currently employed at TIM and openly exploring my next role — permanent, fixed-term, or freelance (partita IVA) all work for me — in the right enterprise or AI-native GenAI architecture or hands-on engineering position, remote-first from Turin with some Milan travel. To start a conversation, leave your email with the Avatar or reach me on LinkedIn.
