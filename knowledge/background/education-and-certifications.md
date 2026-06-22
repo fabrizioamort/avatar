@@ -6,15 +6,22 @@ tags:
   - certifications
   - credentials
   - google-cloud
+  - genetic-algorithms
 priority: 1
-updated: 2026-06-02
+updated: 2026-06-19
 ---
 
 # Education and Certifications
 
+## Early Path Into Computing
+
+My path into computer science started before any formal schooling in it. In my second year of high school I taught myself programming on HP scientific calculators, which used Reverse Polish Notation (RPN). My first calculator of my own was a Sharp PC-1211, where I learned BASIC, and I went on from there to program on a Sinclair ZX Spectrum. By the time I started my computer science diploma, I already had a few years of self-taught programming behind me.
+
 ## Education
 
-I hold a Master's degree in Computer Science from the Università degli Studi di Torino (1986 to 1991), and a High School Diploma in Computer Science from ITIS G. Peano in Turin (1981 to 1986). Computer science has been my formal field since secondary school.
+I hold a Master's degree in Computer Science from the Università degli Studi di Torino (1986 to 1991), graduating with the highest distinction, 110 e lode, and a High School Diploma in Computer Science (perito informatico) from ITIS G. Peano in Turin (1981 to 1986), earned at just 17 years old. Computer science has been my formal field since secondary school.
+
+My thesis applied Artificial Intelligence to improve an expert system by optimizing its parameters with genetic algorithms. It stood out for two reasons at the time: genetic algorithms were themselves a cutting-edge AI technique, and the system ran on a parallel computational architecture built on transputers.
 
 ## Certifications
 
@@ -41,4 +48,4 @@ The skills I lead with are Large Language Model Operations (LLMOps), Google Clou
 
 ## Key Takeaway
 
-A computer science foundation from the late 1980s, kept current with recent Google Cloud architecture and ML engineering certifications plus hands-on agentic AI training.
+A self-taught start on 1980s calculators and home computers, a computer science degree capped with an AI thesis on genetic algorithms (110 e lode), kept current with recent Google Cloud architecture and ML engineering certifications plus hands-on agentic AI training.
