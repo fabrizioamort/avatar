@@ -19,16 +19,25 @@ def _parse_sse(text: str) -> list[dict]:
     return events
 
 
-def _post_chat(client, conversation_id: str, visitor_token: str, message: str) -> list[dict]:
+def _post_chat(
+    client,
+    conversation_id: str,
+    visitor_token: str,
+    message: str,
+    language: str | None = None,
+) -> list[dict]:
+    body = {
+        "conversation_id": conversation_id,
+        "conversation_token": visitor_token,
+        "message": message,
+        "visitor_name": "ZZ",
+    }
+    if language is not None:
+        body["language"] = language
     with client.stream(
         "POST",
         "/api/chat",
-        json={
-            "conversation_id": conversation_id,
-            "conversation_token": visitor_token,
-            "message": message,
-            "visitor_name": "ZZ",
-        },
+        json=body,
     ) as response:
         assert response.status_code == 200
         body = "".join(response.iter_text())
@@ -78,9 +87,10 @@ def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, vis
             )
         ]
 
-    async def fake_stream(transcript, retrieved_knowledge=""):
+    async def fake_stream(transcript, retrieved_knowledge="", language="en"):
         captured["transcript"] = transcript
         captured["retrieved"] = retrieved_knowledge
+        captured["language"] = language
         yield {"type": "token", "text": "Hi"}
         yield {"type": "_final", "text": "Hi there", "tool_calls": []}
 
@@ -94,6 +104,7 @@ def test_chat_retrieves_and_passes_context_to_agent(client, conversation_id, vis
 
     assert captured["query"] == "Tell me about your work"
     assert "GenAI Architect" in captured["retrieved"]  # formatted prompt_text reached the agent
+    assert captured["language"] == "en"
 
     from app import db
 
@@ -113,8 +124,9 @@ def test_chat_falls_back_to_static_knowledge_when_no_chunks(
 
     monkeypatch.setattr(rag_service, "retrieve_knowledge", lambda *a, **k: [])
 
-    async def fake_stream(transcript, retrieved_knowledge=""):
+    async def fake_stream(transcript, retrieved_knowledge="", language="en"):
         captured["retrieved"] = retrieved_knowledge
+        captured["language"] = language
         yield {"type": "_final", "text": "ok", "tool_calls": []}
 
     monkeypatch.setattr(agent, "stream_agent", fake_stream)
@@ -123,3 +135,23 @@ def test_chat_falls_back_to_static_knowledge_when_no_chunks(
     from app import knowledge
 
     assert captured["retrieved"] == knowledge.knowledge_text()
+    assert captured["language"] == "en"
+
+
+def test_chat_passes_italian_language_to_agent(client, conversation_id, visitor_token, monkeypatch):
+    """The selected frontend language reaches prompt construction through the agent stream."""
+    captured = {}
+
+    monkeypatch.setattr(rag_service, "retrieve_knowledge", lambda *a, **k: [])
+
+    async def fake_stream(transcript, retrieved_knowledge="", language="en"):
+        captured["transcript"] = transcript
+        captured["retrieved"] = retrieved_knowledge
+        captured["language"] = language
+        yield {"type": "_final", "text": "ok", "tool_calls": []}
+
+    monkeypatch.setattr(agent, "stream_agent", fake_stream)
+
+    _post_chat(client, conversation_id, visitor_token, "Ciao, raccontami di te", language="it")
+
+    assert captured["language"] == "it"

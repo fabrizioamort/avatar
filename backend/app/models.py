@@ -2,9 +2,10 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 Role = Literal["visitor", "avatar", "human"]
+ChatLanguage = Literal["en", "it"]
 
 
 class Message(BaseModel):
@@ -27,7 +28,20 @@ class ChatRequest(BaseModel):
     conversation_id: str
     conversation_token: str
     message: str
+    language: ChatLanguage = "en"
     visitor_name: str | None = None
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def normalize_language(cls, value: object) -> ChatLanguage:
+        """Accept browser-style language tags, but only expose supported languages."""
+        if isinstance(value, str):
+            lang = value.strip().lower().split("-", 1)[0]
+            if lang == "it":
+                return "it"
+            if lang == "en":
+                return "en"
+        return "en"
 
 
 class LoginRequest(BaseModel):

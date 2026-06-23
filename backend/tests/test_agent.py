@@ -16,6 +16,16 @@ def test_build_system_prompt_includes_retrieved_knowledge_and_style():
     assert "faq_tool" in prompt  # FAQ section + tool usage
 
 
+def test_build_system_prompt_defaults_to_english():
+    prompt = agent.build_system_prompt("## Profile\nContext")
+    assert "Reply in English unless the visitor explicitly asks" in prompt
+
+
+def test_build_system_prompt_can_request_italian():
+    prompt = agent.build_system_prompt("## Profile\nContext", language="it")
+    assert "Reply in Italian unless the visitor explicitly asks" in prompt
+
+
 def test_build_system_prompt_does_not_inject_full_knowledge_by_default():
     """Without retrieved context the full static profile is no longer dumped in."""
     prompt = agent.build_system_prompt()

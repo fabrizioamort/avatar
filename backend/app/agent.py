@@ -22,7 +22,7 @@ from openai.types.responses import ResponseTextDeltaEvent
 from app import knowledge
 from app import abuse
 from app.config import get_settings
-from app.models import Message
+from app.models import ChatLanguage, Message
 from app.push import push
 
 _push_context: ContextVar[tuple[str, str] | None] = ContextVar("push_context", default=None)
@@ -91,7 +91,22 @@ def reset_push_context(tokens: tuple[Token, Token]) -> None:
     _push_used.reset(used_token)
 
 
-def build_system_prompt(retrieved_knowledge: str = "") -> str:
+def response_language_instruction(language: ChatLanguage = "en") -> str:
+    """Return prompt guidance for the visitor-selected response language."""
+    if language == "it":
+        return (
+            "Reply in Italian unless the visitor explicitly asks you to use another language. "
+            "Keep names, links, product names, company names, and technical terms in their "
+            "natural form when translating them would sound forced."
+        )
+    return (
+        "Reply in English unless the visitor explicitly asks you to use another language. "
+        "Keep names, links, product names, company names, and technical terms in their "
+        "natural form."
+    )
+
+
+def build_system_prompt(retrieved_knowledge: str = "", language: ChatLanguage = "en") -> str:
     """Assemble the full multi-way system prompt for the Avatar.
 
     ``retrieved_knowledge`` is the RAG-retrieved profile context for the current
@@ -104,6 +119,10 @@ def build_system_prompt(retrieved_knowledge: str = "") -> str:
 You are the digital twin of {owner}, an AI chatting with visitors on {owner}'s website.
 You represent {owner} professionally, as if speaking to a potential client or future employer.
 If asked, say clearly that you are an AI digital twin of {owner}.
+
+# Response language
+
+{response_language_instruction(language)}
 
 # Relevant knowledge about {owner}
 
@@ -154,12 +173,12 @@ Output only the Avatar's next reply text. Do not prefix it with "Avatar:".
 """
 
 
-def build_agent(retrieved_knowledge: str = "") -> Agent:
+def build_agent(retrieved_knowledge: str = "", language: ChatLanguage = "en") -> Agent:
     """Construct the Avatar agent with its tools and retrieved knowledge."""
     settings = get_settings()
     return Agent(
         name="Avatar",
-        instructions=build_system_prompt(retrieved_knowledge),
+        instructions=build_system_prompt(retrieved_knowledge, language),
         model=settings.model,
         tools=[faq_tool, push_tool],
     )
@@ -201,9 +220,13 @@ def render_transcript(rows: list[Message], owner_name: str, max_chars: int | Non
     return f"{body}{suffix}"
 
 
-async def stream_agent(transcript: str, retrieved_knowledge: str = "") -> AsyncIterator[dict]:
+async def stream_agent(
+    transcript: str,
+    retrieved_knowledge: str = "",
+    language: ChatLanguage = "en",
+) -> AsyncIterator[dict]:
     """Stream the Avatar's reply, yielding tool, token, and a final internal event."""
-    agent = build_agent(retrieved_knowledge)
+    agent = build_agent(retrieved_knowledge, language)
     result = Runner.run_streamed(agent, transcript)
     tool_calls: list[dict] = []
     async for event in result.stream_events():

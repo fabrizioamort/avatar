@@ -35,6 +35,7 @@ export interface ChatBody {
   conversation_id: string;
   conversation_token: string;
   message: string;
+  language?: "en" | "it";
   visitor_name?: string;
 }
 

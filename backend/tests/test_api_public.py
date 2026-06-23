@@ -2,6 +2,7 @@
 
 import os
 
+from app.models import ChatRequest
 from tests.conftest import make_conversation
 
 
@@ -17,6 +18,36 @@ def test_create_conversation_returns_signed_session(client):
     body = response.json()
     assert body["conversation_id"]
     assert body["conversation_token"]
+
+
+def test_chat_request_language_defaults_to_english():
+    request = ChatRequest(conversation_id="c1", conversation_token="t1", message="hello")
+    assert request.language == "en"
+
+
+def test_chat_request_language_accepts_supported_values():
+    assert ChatRequest(
+        conversation_id="c1",
+        conversation_token="t1",
+        message="ciao",
+        language="it",
+    ).language == "it"
+    assert ChatRequest(
+        conversation_id="c1",
+        conversation_token="t1",
+        message="ciao",
+        language="it-IT",
+    ).language == "it"
+
+
+def test_chat_request_language_invalid_values_fall_back_to_english():
+    request = ChatRequest(
+        conversation_id="c1",
+        conversation_token="t1",
+        message="hello",
+        language="fr",
+    )
+    assert request.language == "en"
 
 
 def test_get_conversation_without_token_rejected(client, conversation_id):

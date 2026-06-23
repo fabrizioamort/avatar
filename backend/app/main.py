@@ -149,7 +149,7 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
     )
 
     instant = knowledge.instant_faq_number(message)
-    if instant is not None:
+    if instant is not None and request.language == "en":
         answer = knowledge.get_instant_answer(instant)
         row = db.insert_message(
             request.conversation_id,
@@ -163,7 +163,9 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
         return
 
     retrieved_text = ""
-    if settings.rag_enabled:
+    if instant is not None:
+        retrieved_text = knowledge.find_faq(instant)
+    elif settings.rag_enabled:
         yield {"type": "phase", "phase": "searching"}
         # Off the event loop: a blocking retrieval here would also keep the
         # just-yielded "searching" event from being flushed to the client.
@@ -178,7 +180,11 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
     yield {"type": "phase", "phase": "thinking"}
     push_tokens = agent.set_push_context(request.conversation_id, source_ip)
     try:
-        async for event in agent.stream_agent(transcript, retrieved_text):
+        async for event in agent.stream_agent(
+            transcript,
+            retrieved_text,
+            language=request.language,
+        ):
             if event["type"] == "_final":
                 tool_names = [tc["tool"] for tc in event["tool_calls"]]
                 needs_attention = "push_tool" in tool_names
