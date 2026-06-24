@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from app import db
+from app import agent, db, rag_service
 
 
 def _parse_sse(text: str) -> list[dict]:
@@ -67,16 +67,38 @@ def test_chat_streams_tokens_and_persists(client, conversation_id, visitor_token
     assert rows[-1]["content"]
 
 
-@pytest.mark.llm
-def test_chat_contact_triggers_push(client, conversation_id, visitor_token):
-    """Asking to get in touch with an email should trigger push_tool and needs_attention."""
+def test_chat_contact_intent_triggers_push_before_email(
+    client,
+    conversation_id,
+    visitor_token,
+    monkeypatch,
+):
+    """Asking to get in touch immediately notifies the owner and asks for contact details."""
+    called = {}
+
+    def fake_push(message):
+        called["push_message"] = message
+        return "Message delivered to the human owner."
+
+    def fail_retrieve(*args, **kwargs):
+        raise AssertionError("contact intent should not run retrieval")
+
+    async def fail_stream(*args, **kwargs):
+        raise AssertionError("contact intent should not call the LLM")
+        yield {}
+
+    monkeypatch.setattr(agent, "handle_push_tool", fake_push)
+    monkeypatch.setattr(rag_service, "retrieve_knowledge", fail_retrieve)
+    monkeypatch.setattr(agent, "stream_agent", fail_stream)
+
     with client.stream(
         "POST",
         "/api/chat",
         json={
             "conversation_id": conversation_id,
             "conversation_token": visitor_token,
-            "message": "Please ask the owner to contact me at test@example.com about consulting.",
+            "message": "Vorrei mettermi in contatto con Fabrizio per una consulenza.",
+            "language": "it",
             "visitor_name": "IJ",
         },
     ) as response:
@@ -84,4 +106,16 @@ def test_chat_contact_triggers_push(client, conversation_id, visitor_token):
         body = "".join(response.iter_text())
     events = _parse_sse(body)
     done = events[-1]
+    assert events[0] == {"type": "tool", "phase": "called", "tool": "push_tool"}
+    assert events[1]["type"] == "token"
+    assert "Ho avvisato" in events[1]["text"]
+    assert "email" in events[1]["text"]
     assert done["type"] == "done"
+    assert done["needs_attention"] is True
+
+    assert "mettermi in contatto" in called["push_message"]
+    rows = db.get_messages(conversation_id)
+    assert [r["role"] for r in rows] == ["visitor", "avatar"]
+    assert rows[-1]["tool_calls"] == [{"tool": "push_tool", "trigger": "contact_intent"}]
+    assert rows[-1]["needs_attention"] is True
+    assert rows[-1]["read"] is False

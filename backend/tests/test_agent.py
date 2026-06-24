@@ -26,6 +26,20 @@ def test_build_system_prompt_can_request_italian():
     assert "Reply in Italian unless the visitor explicitly asks" in prompt
 
 
+def test_build_system_prompt_keeps_unrelated_topics_out_of_scope():
+    prompt = agent.build_system_prompt("## Profile\nContext")
+    assert "Stay on topic" in prompt
+    assert "sports predictions" in prompt
+    assert "Do not answer the off-topic" in prompt
+    assert "question, do not offer analysis" in prompt
+
+
+def test_build_system_prompt_requires_immediate_contact_notification():
+    prompt = agent.build_system_prompt("## Profile\nContext")
+    assert "call push_tool immediately" in prompt
+    assert "Never wait for the email before notifying" in prompt
+
+
 def test_build_system_prompt_does_not_inject_full_knowledge_by_default():
     """Without retrieved context the full static profile is no longer dumped in."""
     prompt = agent.build_system_prompt()
@@ -53,6 +67,23 @@ def test_render_transcript_respects_max_chars():
     rendered = agent.render_transcript(rows, "Owner", max_chars=500)
     assert len(rendered) <= 500
     assert rendered.endswith("Reply as the Avatar:")
+
+
+def test_contact_intent_detection_matches_contact_requests():
+    assert agent.is_contact_intent("Can you ask Fabrizio to contact me?")
+    assert agent.is_contact_intent("Vorrei mettermi in contatto con Fabrizio.")
+    assert agent.is_contact_intent("My email is visitor@example.com")
+
+
+def test_contact_intent_detection_ignores_unrelated_questions():
+    assert not agent.is_contact_intent("chi vincera il mondiale di calcio 2026?")
+    assert not agent.is_contact_intent("Q10")
+
+
+def test_contact_reply_asks_for_email_when_missing():
+    reply = agent.contact_intent_reply("Fabrizio", "en", has_detail=False, delivered=True)
+    assert "notified Fabrizio" in reply
+    assert "email" in reply
 
 
 def test_push_tool_blocks_without_context(monkeypatch):

@@ -148,38 +148,61 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
         read=False,
     )
 
-    instant = knowledge.instant_faq_number(message)
-    if instant is not None and request.language == "en":
-        answer = knowledge.get_instant_answer(instant)
-        row = db.insert_message(
-            request.conversation_id,
-            "avatar",
-            answer,
-            tool_calls=[{"type": "instant", "faq": instant}],
-        )
-        yield {"type": "instant", "faq": instant}
-        yield {"type": "token", "text": answer}
-        yield {"type": "done", "message_id": row["id"], "needs_attention": False}
-        return
-
-    retrieved_text = ""
-    if instant is not None:
-        retrieved_text = knowledge.find_faq(instant)
-    elif settings.rag_enabled:
-        yield {"type": "phase", "phase": "searching"}
-        # Off the event loop: a blocking retrieval here would also keep the
-        # just-yielded "searching" event from being flushed to the client.
-        retrieved = await asyncio.to_thread(rag_service.retrieve_knowledge, message)
-        retrieved_text = rag_service.format_retrieved_context(retrieved)
-    if not retrieved_text:
-        # No confident chunk (or RAG disabled): fall back to the static profile.
-        retrieved_text = knowledge.knowledge_text()
-
-    rows = [Message(**r) for r in db.get_messages(request.conversation_id)]
-    transcript = agent.render_transcript(rows, settings.owner_name, settings.max_transcript_chars)
-    yield {"type": "phase", "phase": "thinking"}
     push_tokens = agent.set_push_context(request.conversation_id, source_ip)
     try:
+        if agent.is_contact_intent(message):
+            yield {"type": "tool", "phase": "called", "tool": "push_tool"}
+            push_result = agent.handle_push_tool(
+                agent.build_contact_notification_message(message, request.visitor_name)
+            )
+            answer = agent.contact_intent_reply(
+                settings.owner_name,
+                request.language,
+                has_detail=agent.has_contact_detail(message),
+                delivered=push_result.startswith("Message delivered"),
+            )
+            row = db.insert_message(
+                request.conversation_id,
+                "avatar",
+                answer,
+                tool_calls=[{"tool": "push_tool", "trigger": "contact_intent"}],
+                needs_attention=True,
+                read=False,
+            )
+            yield {"type": "token", "text": answer}
+            yield {"type": "done", "message_id": row["id"], "needs_attention": True}
+            return
+
+        instant = knowledge.instant_faq_number(message)
+        if instant is not None and request.language == "en":
+            answer = knowledge.get_instant_answer(instant)
+            row = db.insert_message(
+                request.conversation_id,
+                "avatar",
+                answer,
+                tool_calls=[{"type": "instant", "faq": instant}],
+            )
+            yield {"type": "instant", "faq": instant}
+            yield {"type": "token", "text": answer}
+            yield {"type": "done", "message_id": row["id"], "needs_attention": False}
+            return
+
+        retrieved_text = ""
+        if instant is not None:
+            retrieved_text = knowledge.find_faq(instant)
+        elif settings.rag_enabled:
+            yield {"type": "phase", "phase": "searching"}
+            # Off the event loop: a blocking retrieval here would also keep the
+            # just-yielded "searching" event from being flushed to the client.
+            retrieved = await asyncio.to_thread(rag_service.retrieve_knowledge, message)
+            retrieved_text = rag_service.format_retrieved_context(retrieved)
+        if not retrieved_text:
+            # No confident chunk (or RAG disabled): fall back to the static profile.
+            retrieved_text = knowledge.knowledge_text()
+
+        rows = [Message(**r) for r in db.get_messages(request.conversation_id)]
+        transcript = agent.render_transcript(rows, settings.owner_name, settings.max_transcript_chars)
+        yield {"type": "phase", "phase": "thinking"}
         async for event in agent.stream_agent(
             transcript,
             retrieved_text,

@@ -5,6 +5,7 @@ rendered into a single task string passed to the agent; the agent always
 replies only as the Avatar.
 """
 
+import re
 from collections.abc import AsyncIterator
 from contextvars import ContextVar, Token
 
@@ -27,6 +28,29 @@ from app.push import push
 
 _push_context: ContextVar[tuple[str, str] | None] = ContextVar("push_context", default=None)
 _push_used: ContextVar[bool] = ContextVar("push_used", default=False)
+
+_CONTACT_DETAIL_RE = re.compile(
+    r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b"
+    r"|(?:\+?\d[\d\s().-]{6,}\d)"
+    r"|linkedin\.com/\S+"
+    r"|github\.com/\S+",
+    re.IGNORECASE,
+)
+_CONTACT_INTENT_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"\b(get in touch|reach out|connect with|talk to|speak to|schedule (?:a )?(?:call|meeting)|book (?:a )?(?:call|meeting))\b",
+        r"\b(contact|reach|email|e-mail|mail|message|call|phone|speak|talk|connect|meet)\b.{0,80}\b(fabrizio|owner|human|you|him)\b",
+        r"\b(fabrizio|owner|human|you|him)\b.{0,80}\b(contact|reach|email|e-mail|mail|message|call|phone|speak|talk|connect|meet)\b",
+        r"\b(contact|reach|email|e-mail|mail|message|call|phone)\b.{0,80}\b(me|us)\b",
+        r"\b(email|e-mail|message|call|phone)\s+me\b",
+        r"\b(my email|my e-mail|email is|e-mail is|contact me at|reach me at|call me at|my number)\b",
+        r"\b(mettermi in contatto|metterci in contatto|entrare in contatto|restare in contatto|fissare una call|prenotare una call|fissare una chiamata|prenotare una chiamata|parlare con fabrizio|parlare con te|sentire fabrizio|mandami una mail|la mia email|la mia mail)\b",
+        r"\b(contattarmi|contattarti|contattarla|ricontattarmi|ricontattarti|scrivimi|scriverti|chiamami|chiamarti|telefonarmi|telefonarti)\b",
+        r"\b(contatt\w*|ricontatt\w*|scriv\w*|chiam\w*|telefon\w*)\b.{0,80}\b(me|mi|fabrizio|te|tu|lei|lui)\b",
+        r"\b(mi|me|ti|le)\b.{0,80}\b(contatt\w*|ricontatt\w*|scriv\w*|chiam\w*|telefon\w*)\b",
+    )
+)
 
 
 def configure_openrouter() -> None:
@@ -106,6 +130,64 @@ def response_language_instruction(language: ChatLanguage = "en") -> str:
     )
 
 
+def is_contact_intent(message: str) -> bool:
+    """Return True when the visitor is trying to contact the human owner."""
+    normalized = " ".join(message.strip().split())
+    if not normalized or re.fullmatch(r"q\d+", normalized, flags=re.IGNORECASE):
+        return False
+    return any(pattern.search(normalized) for pattern in _CONTACT_INTENT_PATTERNS)
+
+
+def has_contact_detail(message: str) -> bool:
+    """Return True when the visitor included an email, phone, or profile link."""
+    return bool(_CONTACT_DETAIL_RE.search(message))
+
+
+def build_contact_notification_message(message: str, visitor_name: str | None = None) -> str:
+    """Build the immediate owner notification for a contact request."""
+    visitor = visitor_name.strip() if visitor_name and visitor_name.strip() else "A visitor"
+    compact = " ".join(message.strip().split())
+    return f"{visitor} asked to contact you: {compact}"
+
+
+def contact_intent_reply(
+    owner: str,
+    language: ChatLanguage,
+    *,
+    has_detail: bool,
+    delivered: bool,
+) -> str:
+    """Return the deterministic reply after the backend handles contact intent."""
+    if language == "it":
+        if delivered:
+            if has_detail:
+                return f"Ho avvisato {owner} e gli ho passato il contesto che hai condiviso."
+            return (
+                f"Ho avvisato {owner} che vuoi metterti in contatto. "
+                "Lascia anche la tua email e un po' di contesto per il follow-up diretto."
+            )
+        if has_detail:
+            return f"Ho segnalato questa conversazione a {owner} con il contesto che hai condiviso."
+        return (
+            f"Ho segnalato questa conversazione a {owner}. "
+            "Lascia anche la tua email e un po' di contesto per il follow-up diretto."
+        )
+
+    if delivered:
+        if has_detail:
+            return f"I've notified {owner} and included the context you shared."
+        return (
+            f"I've notified {owner} that you'd like to get in touch. "
+            f"Leave your email and a bit of context if you want {owner} to follow up directly."
+        )
+    if has_detail:
+        return f"I've flagged this conversation for {owner} with the context you shared."
+    return (
+        f"I've flagged this conversation for {owner}. "
+        f"Leave your email and a bit of context if you want {owner} to follow up directly."
+    )
+
+
 def build_system_prompt(retrieved_knowledge: str = "", language: ChatLanguage = "en") -> str:
     """Assemble the full multi-way system prompt for the Avatar.
 
@@ -162,11 +244,20 @@ List of questions by number:
 
 # Rules
 
+Stay on topic. Answer questions about {owner}, {owner}'s career, background, projects, skills,
+experience, availability, AI/software architecture, and adjacent professional topics.
+If the visitor asks a standalone question outside that scope, such as sports predictions,
+politics, entertainment, generic trivia, or unrelated advice, briefly say you can only help with
+questions about {owner}'s work and adjacent AI/software topics. Do not answer the off-topic
+question, do not offer analysis or shortlists about it, and do not use push_tool for off-topic
+questions unless the visitor also asks to contact {owner}.
+
 If you do not know the answer, do not invent one: tell the visitor you do not know and call
 push_tool to record the question for {owner}.
 
-Contact capture: if the visitor wants to get in touch, ask for their email, then call push_tool
-with their email and the context, and tell the visitor you have notified {owner}.
+Contact capture: if the visitor wants to get in touch, call push_tool immediately with the context.
+If they have not provided an email or other contact detail, ask for it after notifying {owner}.
+Never wait for the email before notifying {owner}.
 
 Do not use code blocks; the chat renders bold, links, inline `code` and short lists, but not code fences.
 Output only the Avatar's next reply text. Do not prefix it with "Avatar:".
