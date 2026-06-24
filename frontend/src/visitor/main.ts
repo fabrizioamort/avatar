@@ -168,7 +168,7 @@ function renderMessage(msg: Message): void {
 
 const TOOL_LABELS: Record<string, { text: () => string; icon: string }> = {
   faq_tool: { text: () => "Looked up the FAQ &middot; faq_tool", icon: "check" },
-  push_tool: { text: () => `Notified ${escapeHtml(ownerName)} &middot; push_tool`, icon: "mail" },
+  push_tool: { text: () => `Asked ${escapeHtml(ownerName)} to follow up &middot; push_tool`, icon: "mail" },
 };
 
 /** Add (or finalise) a tool-status line above the avatar bubble. */

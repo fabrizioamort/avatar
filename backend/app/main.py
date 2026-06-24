@@ -78,6 +78,23 @@ def clamp_message(text: str) -> str:
     return text[:limit] + " " + TRUNCATION_NOTE
 
 
+def push_tool_call(push_result: str, trigger: str) -> dict:
+    """Stored tool metadata for admin/visitor status labels."""
+    delivered = push_result.startswith("Message delivered")
+    if delivered:
+        status = "delivered"
+    elif "rate limit" in push_result.lower():
+        status = "rate_limited"
+    else:
+        status = "failed"
+    return {
+        "tool": "push_tool",
+        "trigger": trigger,
+        "delivery_status": status,
+        "delivered": delivered,
+    }
+
+
 async def enforce_public_chat_guard(request: Request) -> None:
     """Reject invalid or abusive chat before writes, RAG, or model calls."""
     body = await request.json()
@@ -165,7 +182,7 @@ async def _chat_events(request: ChatRequest, source_ip: str) -> AsyncIterator[di
                 request.conversation_id,
                 "avatar",
                 answer,
-                tool_calls=[{"tool": "push_tool", "trigger": "contact_intent"}],
+                tool_calls=[push_tool_call(push_result, "contact_intent")],
                 needs_attention=True,
                 read=False,
             )

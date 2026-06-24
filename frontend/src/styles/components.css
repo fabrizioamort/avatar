@@ -330,7 +330,14 @@ body {
 .convo-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .convo-item.is-unread .convo-name { color: var(--text); }
 .convo-item.is-unread .convo-preview { color: var(--text); font-weight: 500; }
-.convo-item.is-attention { background: var(--yellow-soft); }
+.convo-item.is-attention {
+  background: var(--yellow-soft);
+  box-shadow: inset 0 0 0 1px var(--yellow-line), var(--glow-yellow);
+}
+.convo-item.is-attention::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+  background: var(--yellow-strong); border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
 .convo-item.is-attention:hover { background: color-mix(in srgb, var(--yellow-soft) 70%, var(--surface-2)); }
 
 /* ---- Surfaces / cards ---- */

@@ -21,10 +21,29 @@ import { formatShort, formatTime } from "../lib/time.ts";
 
 const POLL_MS = 10_000;
 
-/** Tool-status labels keyed by stored tool name (owner injected at render time). */
-function toolLabel(tool: string, owner: string): { icon: string; text: string } {
+interface ToolCall {
+  tool?: string;
+  type?: string;
+  delivery_status?: string;
+  delivered?: boolean;
+}
+
+/** Tool-status labels keyed by stored tool metadata (owner injected at render time). */
+function toolLabel(call: ToolCall, owner: string): { icon: string; text: string } {
+  const tool = call.tool ?? call.type ?? "";
   if (tool === "faq_tool") return { icon: "check", text: "faq_tool · looked up the FAQ" };
-  if (tool === "push_tool") return { icon: "mail", text: `push_tool · notified ${owner}` };
+  if (tool === "push_tool") {
+    if (call.delivery_status === "delivered" || call.delivered === true) {
+      return { icon: "mail", text: `push_tool · notified ${owner}` };
+    }
+    if (call.delivery_status === "rate_limited") {
+      return { icon: "mail", text: "push_tool · rate-limited, flagged here" };
+    }
+    if (call.delivery_status === "failed") {
+      return { icon: "mail", text: "push_tool · notification failed, flagged here" };
+    }
+    return { icon: "mail", text: "push_tool · flagged for follow-up" };
+  }
   if (tool === "instant") return { icon: "check", text: "instant answer" };
   return { icon: "tool", text: tool };
 }
@@ -144,9 +163,10 @@ function toolStatusHtml(message: Message): string {
   if (!message.tool_calls) return "";
   return message.tool_calls
     .map((call) => {
-      const name = (call as { tool?: string; type?: string }).tool ?? (call as { type?: string }).type ?? "";
+      const toolCall = call as ToolCall;
+      const name = toolCall.tool ?? toolCall.type ?? "";
       if (!name) return "";
-      const label = toolLabel(name, state.owner);
+      const label = toolLabel(toolCall, state.owner);
       return `<div class="tool-status is-done">${icon(label.icon, "icon")} ${escapeHtml(label.text)}</div>`;
     })
     .join("");
@@ -347,10 +367,12 @@ async function startDashboard(): Promise<void> {
 
   state.conversations = await listConversations();
   renderInbox();
-  // On a phone, land on the inbox; don't auto-open (which would mark a thread
-  // read). On wider screens keep the side-by-side auto-selection.
-  if (!mobileMq.matches && state.conversations.length) {
-    await selectConversation(state.conversations[0].conversation_id);
+  // Auto-opening marks a thread read and clears the attention flag server-side.
+  // Keep urgent or unread conversations visible in the inbox until the admin
+  // explicitly opens them.
+  const first = state.conversations[0];
+  if (!mobileMq.matches && first && !first.unread && !first.needs_attention) {
+    await selectConversation(first.conversation_id);
   }
   startPolling();
 }

@@ -116,6 +116,55 @@ def test_chat_contact_intent_triggers_push_before_email(
     assert "mettermi in contatto" in called["push_message"]
     rows = db.get_messages(conversation_id)
     assert [r["role"] for r in rows] == ["visitor", "avatar"]
-    assert rows[-1]["tool_calls"] == [{"tool": "push_tool", "trigger": "contact_intent"}]
+    assert rows[-1]["tool_calls"] == [
+        {
+            "tool": "push_tool",
+            "trigger": "contact_intent",
+            "delivery_status": "delivered",
+            "delivered": True,
+        }
+    ]
     assert rows[-1]["needs_attention"] is True
     assert rows[-1]["read"] is False
+
+
+def test_chat_contact_intent_records_failed_push(
+    client,
+    conversation_id,
+    visitor_token,
+    monkeypatch,
+):
+    """A failed Pushover call still flags the thread, but does not claim delivery."""
+
+    def fake_push(message):
+        return "Notification could not be delivered to the human owner."
+
+    monkeypatch.setattr(agent, "handle_push_tool", fake_push)
+
+    with client.stream(
+        "POST",
+        "/api/chat",
+        json={
+            "conversation_id": conversation_id,
+            "conversation_token": visitor_token,
+            "message": "Vorrei mettermi in contatto con Fabrizio per una consulenza.",
+            "language": "it",
+            "visitor_name": "IJ",
+        },
+    ) as response:
+        assert response.status_code == 200
+        body = "".join(response.iter_text())
+    events = _parse_sse(body)
+
+    assert events[-1]["needs_attention"] is True
+    assert "Ho segnalato" in events[1]["text"]
+    rows = db.get_messages(conversation_id)
+    assert rows[-1]["tool_calls"] == [
+        {
+            "tool": "push_tool",
+            "trigger": "contact_intent",
+            "delivery_status": "failed",
+            "delivered": False,
+        }
+    ]
+    assert rows[-1]["needs_attention"] is True
